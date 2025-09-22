@@ -1,0 +1,5 @@
+Django
+openstacksdk
+weasyprint
+celery
+redis  
