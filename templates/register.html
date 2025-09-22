@@ -1,0 +1,73 @@
+{% extends "accounts/base.html" %}
+{% block content %}
+<div class="flex items-center justify-center min-h-screen bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
+  <div class="max-w-5xl w-full bg-white p-10 rounded-2xl shadow-lg">
+    <h2 class="text-3xl font-bold text-gray-900 mb-8 text-center">Create an Account</h2>
+
+    <form method="post" class="space-y-8">
+      {% csrf_token %}
+      
+      <!-- 2-column grid -->
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+        
+        <!-- Left side -->
+        <div class="space-y-7">
+          <div>
+            <label class="block text-base font-medium text-gray-700">{{ form.username.label }}</label>
+            {{ form.username }}
+          </div>
+          <div>
+            <label class="block text-base font-medium text-gray-700">{{ form.email.label }}</label>
+            {{ form.email }}
+          </div>
+          <div>
+            <label class="block text-base font-medium text-gray-700">{{ form.first_name.label }}</label>
+            {{ form.first_name }}
+          </div>
+          <div>
+            <label class="block text-base font-medium text-gray-700">{{ form.last_name.label }}</label>
+            {{ form.last_name }}
+          </div>
+          <div>
+            <label class="block text-base font-medium text-gray-700">{{ form.password1.label }}</label>
+            {{ form.password1 }}
+          </div>
+          <div>
+            <label class="block text-base font-medium text-gray-700">{{ form.password2.label }}</label>
+            {{ form.password2 }}
+          </div>
+        </div>
+        
+        <!-- Right side -->
+        <div class="space-y-6">
+          <div>
+            <label class="block text-base font-medium text-gray-700">{{ form.company_name.label }}</label>
+            {{ form.company_name }}
+          </div>
+          <div>
+            <label class="block text-base font-medium text-gray-700">{{ form.address.label }}</label>
+            {{ form.address }}
+          </div>
+          <div>
+            <label class="block text-base font-medium text-gray-700">{{ form.phone_number.label }}</label>
+            {{ form.phone_number }}
+          </div>
+          <div>
+            <label class="block text-base font-medium text-gray-700">{{ form.vat_number.label }}</label>
+            {{ form.vat_number }}
+          </div>
+        </div>
+      </div>
+
+      <!-- Submit -->
+      <div class="mx-auto w-14">
+        <button type="submit"
+          class="px-6 py-3 bg-red-600 text-white font-semibold rounded-lg shadow-md hover:bg-gray-900 
+          transition-colors duration-300">
+          Register
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

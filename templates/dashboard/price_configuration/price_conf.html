@@ -1,0 +1,190 @@
+{% extends 'dashboard/base.html' %}
+
+{% block page_title %}
+Pricing Configuration
+{% endblock %}
+
+
+{% block content %}
+<div class="bg-white p-6 rounded-lg shadow-md">
+    <div class="flex justify-between items-center mb-4">
+        <h2 class="text-xl font-semibold text-gray-800">Pricing Configuration</h2>
+        <button id="add-price-btn"
+                class="px-2 py-1 bg-red-600 text-white font-medium rounded-md shadow-sm hover:bg-red-700"
+                data-modal-target="price-modal" data-modal-toggle="price-modal" type="button"
+                data-url="">
+            <i class="fas fa-plus mr-2"></i>Add Price
+        </button>
+    </div>
+    
+    <div class="overflow-x-auto">
+        <ul class="flex whitespace-nowrap border-b border-gray-200" id="pricing-tabs" role="tablist">
+            <li class="mr-2" role="presentation">
+                <a href="#flavor-tab" class="inline-block p-4 border-b-2 border-transparent rounded-t-lg hover:text-gray-600 hover:border-gray-300 text-indigo-600 border-indigo-600" data-tab-toggle="flavor-tab" role="tab">Flavor</a>
+            </li>
+            <li class="mr-2" role="presentation">
+                <a href="#volume-tab" class="inline-block p-4 border-b-2 border-transparent rounded-t-lg hover:text-gray-600 hover:border-gray-300" data-tab-toggle="volume-tab" role="tab">Volume</a>
+            </li>
+            <li class="mr-2" role="presentation">
+                <a href="#ip-tab" class="inline-block p-4 border-b-2 border-transparent rounded-t-lg hover:text-gray-600 hover:border-gray-300" data-tab-toggle="ip-tab" role="tab">IP</a>
+            </li>
+            <li class="mr-2" role="presentation">
+                <a href="#router-tab" class="inline-block p-4 border-b-2 border-transparent rounded-t-lg hover:text-gray-600 hover:border-gray-300" data-tab-toggle="router-tab" role="tab">Router</a>
+            </li>
+            <li class="mr-2" role="presentation">
+                <a href="#snapshot-tab" class="inline-block p-4 border-b-2 border-transparent rounded-t-lg hover:text-gray-600 hover:border-gray-300" data-tab-toggle="snapshot-tab" role="tab">Snapshot</a>
+            </li>
+            <li class="mr-2" role="presentation">
+                <a href="#image-tab" class="inline-block p-4 border-b-2 border-transparent rounded-t-lg hover:text-gray-600 hover:border-gray-300" data-tab-toggle="image-tab" role="tab">Image</a>
+            </li>
+        </ul>
+    </div>
+    
+    <div id="tab-content" class="mt-4">
+        <div id="flavor-tab" class="tab-pane" role="tabpanel">
+            {% include 'dashboard/price_configuration/price_table.html' with prices=flavor_prices price_type_name="Flavor" %}
+        </div>
+        <div id="volume-tab" class="tab-pane hidden" role="tabpanel">
+            {% include 'dashboard/price_configuration/price_table.html' with prices=volume_prices price_type_name="Volume" %}
+        </div>
+        <div id="ip-tab" class="tab-pane hidden" role="tabpanel">
+            {% include 'dashboard/price_configuration/price_table.html' with prices=ip_prices price_type_name="IP" %}
+        </div>
+        <div id="router-tab" class="tab-pane hidden" role="tabpanel">
+            {% include 'dashboard/price_configuration/price_table.html' with prices=router_prices price_type_name="Router" %}
+        </div>
+        <div id="snapshot-tab" class="tab-pane hidden" role="tabpanel">
+            {% include 'dashboard/price_configuration/price_table.html' with prices=snapshot_prices price_type_name="Snapshot" %}
+        </div>
+        <div id="image-tab" class="tab-pane hidden" role="tabpanel">
+            {% include 'dashboard/price_configuration/price_table.html' with prices=image_prices price_type_name="Image" %}
+        </div>
+    </div>
+</div>
+
+{% include 'dashboard/price_configuration/modal.html' %}
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    const addPriceBtn = document.getElementById('add-price-btn');
+    const tabs = document.querySelectorAll('[data-tab-toggle]');
+    const tabPanes = document.querySelectorAll('.tab-pane');
+    
+    const updateAddButtonUrl = (activeTabId) => {
+        let url = '';
+        if (activeTabId === 'flavor-tab') url = "{% url 'price_create' model_name='flavor' %}";
+        else if (activeTabId === 'volume-tab') url = "{% url 'price_create' model_name='volume' %}";
+        else if (activeTabId === 'ip-tab') url = "{% url 'price_create' model_name='ip' %}";
+        else if (activeTabId === 'router-tab') url = "{% url 'price_create' model_name='router' %}";
+        else if (activeTabId === 'snapshot-tab') url = "{% url 'price_create' model_name='snapshot' %}";
+        else if (activeTabId === 'image-tab') url = "{% url 'price_create' model_name='image' %}";
+        addPriceBtn.setAttribute('data-url', url);
+    };
+
+    const getActiveTabId = () => {
+        const activeTabLink = document.querySelector('[data-tab-toggle].border-indigo-600');
+        if (activeTabLink) {
+            return activeTabLink.getAttribute('href').substring(1);
+        }
+        return 'flavor-tab'; // Default to the first tab
+    };
+
+    // Initial setup when the page loads
+    updateAddButtonUrl(getActiveTabId());
+
+    tabs.forEach(tab => {
+        tab.addEventListener('click', (e) => {
+            e.preventDefault();
+            const targetId = e.target.getAttribute('href').substring(1);
+
+            tabPanes.forEach(pane => pane.classList.add('hidden'));
+            tabs.forEach(t => {
+                t.classList.remove('text-indigo-600', 'border-indigo-600');
+                t.classList.add('border-transparent');
+            });
+
+            document.getElementById(targetId).classList.remove('hidden');
+            e.target.classList.add('text-indigo-600', 'border-indigo-600');
+            e.target.classList.remove('border-transparent');
+            
+            updateAddButtonUrl(targetId);
+        });
+    });
+
+    const modal = document.getElementById('price-modal');
+    const modalContent = document.getElementById('modal-content');
+    
+    const loadModalContent = (url) => {
+        if (!url) {
+            console.error("URL is undefined. Cannot load modal content.");
+            return;
+        }
+
+        fetch(url, {
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest' // It is used for Django to recognize AJAX requests
+            }
+        })
+        .then(response => {
+            if (!response.ok) {
+                throw new Error('Network response was not ok');
+            }
+            return response.text();
+        })
+        .then(html => {
+            modalContent.innerHTML = html;
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+        })
+        .catch(error => {
+            console.error('Error fetching modal content:', error);
+            alert('Could not load the form. Please check the console for details.');
+        });
+    };
+
+    addPriceBtn.addEventListener('click', (e) => {
+        const url = e.currentTarget.getAttribute('data-url');
+        loadModalContent(url);
+    });
+
+    document.addEventListener('click', (e) => {
+        // Use a more specific selector
+        if (e.target.closest('.update-link, .delete-link')) {
+            e.preventDefault();
+            const link = e.target.closest('.update-link, .delete-link');
+            const url = link.getAttribute('data-url');
+            loadModalContent(url);
+        }
+    });
+
+    window.closeModal = () => {
+        modal.classList.add('hidden');
+        modal.classList.remove('flex');
+        modalContent.innerHTML = '';
+    };
+
+    modal.addEventListener('click', (e) => {
+        if (e.target.matches('[data-modal-hide="price-modal"]')) {
+            window.closeModal();
+        }
+    });
+
+document.addEventListener('click', (e) => {
+        // Close all dropdowns
+        document.querySelectorAll('.dropdown-menu').forEach(menu => {
+            menu.classList.add('hidden');
+        });
+
+        // Open the clicked dropdown if a toggle button was clicked
+        const dropdownToggle = e.target.closest('.dropdown-toggle');
+        if (dropdownToggle) {
+            const dropdownMenu = dropdownToggle.nextElementSibling;
+            if (dropdownMenu && dropdownMenu.classList.contains('dropdown-menu')) {
+                dropdownMenu.classList.remove('hidden');
+                e.stopPropagation(); // Prevents the global click handler from immediately closing it
+            }
+        }
+    });
+</script>
+{% endblock %}

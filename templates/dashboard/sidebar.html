@@ -1,0 +1,32 @@
+{% load static %}
+<aside id="sidebar" class="sidebar bg-gray-900 text-white w-64 space-y-6 py-7 px-2 absolute inset-y-0 left-0 transform -translate-x-full md:relative md:translate-x-0 z-30 transition-all duration-300 shadow-md">
+    <a href="{% url 'dashboard' %}" class="text-white flex items-center space-x-3 px-4">
+        <a href="{% url 'dashboard' %}"><img src="{% static 'img/logo.png' %}" class="w-32 sm:mx-auto" /></a>
+    </a>
+    <nav>
+        <a href="{% url 'dashboard' %}" class="flex items-center py-2.5 px-4 rounded transition duration-200 hover:bg-gray-700 active-nav-dark">
+            <i class="fas fa-tachometer-alt w-6"></i>
+            <span class="ml-4">Dashboard</span>
+        </a>
+
+        <a href="{% url 'price_config' %}" class="flex items-center py-2.5 px-4 rounded transition duration-200 hover:bg-gray-700">
+            <i class="fas fa-bell w-6"></i>
+            <span class="ml-4">PriceConfiguration</span>
+        </a>
+
+        <a href="#" class="flex items-center py-2.5 px-4 rounded transition duration-200 hover:bg-gray-700">
+            <i class="fas fa-users-cog w-6"></i>
+            <span class="ml-4">Tenants</span>
+        </a>
+
+        <a href="#" class="flex items-center py-2.5 px-4 rounded transition duration-200 hover:bg-gray-700">
+            <i class="fas fa-file-invoice-dollar w-6"></i>
+            <span class="ml-4">Invoices</span>
+        </a>
+
+        <a href="#" class="flex items-center py-2.5 px-4 rounded transition duration-200 hover:bg-gray-700">
+            <i class="fas fa-bell w-6"></i>
+            <span class="ml-4">Notifications</span>
+        </a>
+    </nav>
+</aside>

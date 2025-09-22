@@ -1,0 +1,47 @@
+<div>
+    <table class="min-w-full divide-y divide-gray-200">
+        <thead class="bg-gray-50">
+            <tr>
+                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
+                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ID</th>
+                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Hourly Price</th>
+                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Monthly Price</th>
+                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Action</th>
+            </tr>
+        </thead>
+        <tbody class="bg-white divide-y divide-gray-200">
+            {% for price in prices %}
+            <tr>
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                    {% if price.flavor_id %}{{ price.flavor_id }}{% elif price.volume_type_id %}{{ price.volume_type_id }}{% else %}N/A{% endif %}
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ price.id }}</td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ price.hourly_price }} {{ price.price_currency }}</td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ price.monthly_price }} {{ price.price_currency }}</td>
+                <td class="px-6 py-4 whitespace-now-wrap text-sm font-medium relative">
+                    <div class="relative inline-block text-left">
+                        <button type="button" class="inline-flex justify-center w-full rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none dropdown-toggle">
+                            Actions
+                            <i class="fas fa-chevron-down -mr-1 ml-2 h-5 w-5"></i>
+                        </button>
+                        <div class="hidden origin-top-right absolute right-0 mt-2 w-56 rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5 z-50 dropdown-menu" role="menu">
+                            <div class="py-1" role="none">
+                                <a href="#" class="update-link text-gray-700 block px-4 py-2 text-sm hover:bg-gray-100" data-url="{% url 'price_update' model_name=price_type_name|lower pk=price.id %}" role="menuitem">
+                                    <i class="fas fa-edit mr-2"></i>Update
+                                </a>
+                                <a href="#" class="delete-link text-gray-700 block px-4 py-2 text-sm hover:bg-gray-100" data-url="{% url 'price_delete' model_name=price_type_name|lower pk=price.id %}" role="menuitem">
+                                    <i class="fas fa-trash-alt mr-2"></i>Delete
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </td>
+            </tr>
+            {% empty %}
+            <tr>
+                <td colspan="5" class="px-6 py-4 text-center text-sm text-gray-500">No prices available.</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>

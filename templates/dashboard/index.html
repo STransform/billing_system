@@ -1,0 +1,61 @@
+{% extends 'dashboard/base.html' %}
+
+{% block content %}
+    <h1 class="text-2xl font-semibold text-gray-800 hidden md:block py-2">
+        {% block title %}
+        Admin Overview
+        {% endblock %}
+    </h1>
+<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
+    <div class="bg-white p-6 rounded-lg shadow-md stat-card">
+        <p class="text-sm font-medium text-gray-500">Monthly Revenue</p>
+        <p class="text-3xl font-bold text-gray-800">ETB 48,950</p>
+    </div>
+    <div class="bg-white p-6 rounded-lg shadow-md stat-card">
+        <p class="text-sm font-medium text-gray-500">Active Tenants</p>
+        <p class="text-3xl font-bold text-gray-800">82</p>
+    </div>
+    <div class="bg-white p-6 rounded-lg shadow-md stat-card">
+        <p class="text-sm font-medium text-gray-500">Total vCPU Hours</p>
+        <p class="text-3xl font-bold text-gray-800">1.25M</p>
+    </div>
+    <div class="bg-white p-6 rounded-lg shadow-md stat-card">
+        <p class="text-sm font-medium text-gray-500">Storage Utilized</p>
+        <p class="text-3xl font-bold text-gray-800">45.8 TB</p>
+    </div>
+</div>
+
+<div class="bg-white p-6 rounded-lg shadow-md">
+    <h2 class="text-xl font-semibold mb-4 text-gray-800">Your Servers</h2>
+    <div class="overflow-x-auto">
+    {% if error %}
+        <p class="error">{{ error }}</p>
+    {% else %}
+        <p>Tenant ID: {{ tenant_id }}</p>
+        {% if instances %}
+            <table class="min-w-full">
+                <thead>
+                    <tr class="border-b border-gray-200">
+                        <th class="text-left py-3 px-4 font-semibold text-sm text-gray-600">Name</th>
+                        <th class="text-left py-3 px-4 font-semibold text-sm text-gray-600">Instance ID</th>
+                        <th class="text-left py-3 px-4 font-semibold text-sm text-gray-600">Flavor ID</th>
+                        <th class="text-left py-3 px-4 font-semibold text-sm text-gray-600">Start Date</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for instance in instances %}
+                        <tr class="border-b border-gray-200 hover:bg-gray-50">
+                            <td class="py-3 px-4 text-gray-800">{{ instance.name }}</td>
+                            <td class="py-3 px-4 font-semibold text-gray-800">{{ instance.instance_id }}</td>
+                            <td class="py-3 px-4 font-semibold text-gray-800">{{ instance.flavor_id }}</td>
+                            <td class="py-3 px-4 text-gray-800">{{ instance.start_date }}</td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        {% else %}
+            <p>No instances found for this tenant.</p>
+        {% endif %}
+    {% endif %}
+
+{% endblock %}

@@ -1,0 +1,64 @@
+{% extends "dashboard/base.html" %}
+{% block title %}Profile{% endblock %}
+
+{% block content %}
+<h1 class="text-3xl font-bold mb-6 text-gray-800">Your Profile</h1>
+
+<div class="bg-white shadow-lg rounded-2xl p-6 md:p-8 border border-gray-100">
+  <div class="grid md:grid-cols-2 gap-y-4 gap-x-8">
+    <!-- Username -->
+    <div class="flex items-center">
+      <span class="font-semibold text-gray-600 w-32">👤 Username:</span>
+      <span class="text-gray-800">{{ user.username }}</span>
+    </div>
+
+    <!-- Full Name -->
+    <div class="flex items-center">
+      <span class="font-semibold text-gray-600 w-32">📝 Full Name:</span>
+      <span class="text-gray-800">{{ user.get_full_name }}</span>
+    </div>
+
+    <!-- Email -->
+    <div class="flex items-center">
+      <span class="font-semibold text-gray-600 w-32">📧 Email:</span>
+      <span class="text-gray-800">{{ user.email }}</span>
+    </div>
+
+    <!-- Company -->
+    <div class="flex items-center">
+      <span class="font-semibold text-gray-600 w-32">🏢 Company:</span>
+      <span class="text-gray-800">{{ user.company_name }}</span>
+    </div>
+
+    <!-- Address -->
+    <div class="flex items-center">
+      <span class="font-semibold text-gray-600 w-32">📍 Address:</span>
+      <span class="text-gray-800">{{ user.address }}</span>
+    </div>
+
+    <!-- Phone -->
+    <div class="flex items-center">
+      <span class="font-semibold text-gray-600 w-32">📞 Phone:</span>
+      <span class="text-gray-800">{{ user.phone_number }}</span>
+    </div>
+
+    <!-- VAT -->
+    <div class="flex items-center">
+      <span class="font-semibold text-gray-600 w-32">💳 VAT:</span>
+      <span class="text-gray-800">{{ user.vat_number }}</span>
+    </div>
+  </div>
+</div>
+
+<!-- Action Buttons -->
+<div class="mt-6 flex gap-4">
+  <a href="{% url 'accounts:profile_edit' %}" 
+     class="px-5 py-2 bg-red-700 text-white rounded-lg shadow hover:bg-red-600 transition">
+     ✏️ Edit Profile
+  </a>
+  
+
+
+</div>
+{% endblock %}
+
