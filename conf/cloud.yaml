@@ -1,0 +1,10 @@
+clouds:
+  kolla-admin:
+    auth:
+      auth_url: http://cloud.otech.et:5000
+      project_domain_name: Default
+      user_domain_name: Default
+      project_name: admin
+      username: admin
+      password: E7Vk2zfoxUGFzWVQX1PNfIOjb0d0o8d4nPnIgu8r
+    region_name: RegionOne

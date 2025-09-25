@@ -1,0 +1,14 @@
+{% extends 'landing_page/base.html' %}
+{% block content %}
+<section class="py-20 bg-gray-50">
+    <div class="max-w-6xl mx-auto px-6">
+        <h2 class="text-3xl font-bold mb-8">Payment for Invoice #{{ invoice.invoice_number }}</h2>
+        <p>Total: {{ invoice.total }} {{ invoice.total_currency }}</p>
+        <form method="post">
+            {% csrf_token %}
+            <label>Transaction ID: <input type="text" name="transaction_id"></label>
+            <button type="submit" class="px-6 py-3 bg-red-700 text-white rounded">Pay Now</button>
+        </form>
+    </div>
+</section>
+{% endblock %}

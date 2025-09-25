@@ -1,0 +1,18 @@
+{% extends 'emails/base_email.html' %}
+{% load i18n %}
+
+{% block content %}
+    <p>{% trans "Hello" %} {{ user.first_name }},</p>
+    <p>{% trans "A new invoice has been generated for your account." %}</p>
+    <p>{% trans "Details" %}:</p>
+    <ul>
+        <li>{% trans "Invoice Number" %}: {{ invoice.invoice_number }}</li>
+        <li>{% trans "Amount" %}: {{ invoice.total_currency }} {{ invoice.amount }}</li>
+        <li>{% trans "Issue Date" %}: {{ invoice.issue_date|date:"Y-m-d" }}</li>
+        <li>{% trans "Due Date" %}: {{ invoice.due_date|date:"Y-m-d" }}</li>
+        <li>{% trans "Status" %}: {{ invoice.status|capfirst }}</li>
+    </ul>
+    <p>
+        <a href="{{ invoice_url }}" class="button">{% trans "View Invoice" %}</a>
+    </p>
+{% endblock %}

@@ -1,0 +1,17 @@
+{% extends 'emails/base_email.html' %}
+{% load i18n %}
+
+{% block content %}
+    <p>{% trans "Hello" %} {{ user.first_name }},</p>
+    <p>{% trans "Your payment has been successfully recorded." %}</p>
+    <p>{% trans "Details" %}:</p>
+    <ul>
+        <li>{% trans "Invoice Number" %}: {{ invoice.invoice_number }}</li>
+        <li>{% trans "Payment Amount" %}: {{ invoice.total_currency }} {{ payment.amount }}</li>
+        <li>{% trans "Payment Date" %}: {{ payment.payment_date|date:"Y-m-d" }}</li>
+        <li>{% trans "Invoice Status" %}: {{ invoice.status|capfirst }}</li>
+    </ul>
+    <p>
+        <a href="{{ invoices_url }}" class="button">{% trans "View Invoices" %}</a>
+    </p>
+{% endblock %}
