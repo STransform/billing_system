@@ -1,0 +1,18 @@
+{% extends 'emails/base_email.html' %}
+{% load i18n %}
+
+{% block content %}
+    <p>{% trans "Hello" %} {{ user.first_name }},</p>
+    <p>{% trans "Your subscription has been successfully created!" %}</p>
+    <p>{% trans "Details" %}:</p>
+    <ul>
+        <li>{% trans "Plan" %}: {{ subscription.plan.name }}</li>
+        <li>{% trans "Price" %}: {{ subscription.plan.price_currency }} {{ subscription.plan.monthly_price }} / {% trans "month" %}</li>
+        <li>{% trans "Start Date" %}: {{ subscription.start_date|date:"Y-m-d" }}</li>
+        <li>{% trans "End Date" %}: {{ subscription.end_date|date:"Y-m-d" }}</li>
+        <li>{% trans "Status" %}: {{ subscription.status|capfirst }}</li>
+    </ul>
+    <p>
+        <a href="{{ dashboard_url }}" class="button">{% trans "View Dashboard" %}</a>
+    </p>
+{% endblock %}

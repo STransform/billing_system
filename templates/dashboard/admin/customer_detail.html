@@ -1,0 +1,164 @@
+{% extends 'dashboard/common/base.html' %}
+{% block title %}
+Customer Details - {{ customer.name }}
+{% endblock %}
+{% block content %}
+<nav class="mb-4">
+    <a href="{% url 'core:customer_list' %}" class="text-blue-600 hover:underline">Customers</a> &gt; {{ customer.name|default:"Unnamed Customer" }}
+</nav>
+<h1 class="text-2xl font-semibold text-gray-800 hidden md:block py-2">Customer Details - {{ customer.name|default:"Unnamed Customer" }}</h1>
+<div class="bg-white p-6 rounded-lg shadow-md">
+    <h2 class="text-xl font-semibold mb-4 text-gray-800">Customer Information</h2>
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+        <div>
+            <p><strong>Name:</strong> {{ customer.name|default:"N/A" }}</p>
+            <p><strong>Email:</strong> {{ customer.email|default:"N/A" }}</p>
+            <p><strong>Company:</strong> {{ customer.company|default:"N/A" }}</p>
+            <p><strong>TIN Number:</strong> {{ customer.tin_number|default:"N/A" }}</p>
+            <p><strong>Phone:</strong> {{ customer.phone|default:"N/A" }}</p>
+        </div>
+        <div>
+            <p><strong>Address:</strong> {{ customer.address|default:"N/A" }}</p>
+            <p><strong>City:</strong> {{ customer.city|default:"N/A" }}</p>
+            <p><strong>State:</strong> {{ customer.state|default:"N/A" }}</p>
+            <p><strong>Country:</strong> {{ customer.country|default:"N/A" }}</p>
+            <p><strong>Payment Method:</strong> {{ customer.preferred_payment_method|default:"N/A" }}</p>
+            <p><strong>Operating System:</strong> {{ customer.operating_system|default:"N/A" }}</p>
+            <p><strong>Verified:</strong> 
+                {% if customer.is_verified %}
+                    <span class="text-green-600">Verified</span>
+                {% else %}
+                    <span class="text-red-600">Not Verified</span>
+                {% endif %}
+            </p>
+            <p><strong>Created At:</strong> {{ customer.created_at|date:"Y-m-d H:i"|default:"N/A" }}</p>
+        </div>
+    </div>
+
+    <h2 class="text-xl font-semibold mb-4 text-gray-800">Subscription History</h2>
+    {% if subscriptions %}
+        <div class="overflow-x-auto mb-6">
+            <table class="min-w-full">
+                <thead>
+                    <tr class="border-b border-gray-200">
+                        <th class="text-left py-3 px-4 font-semibold text-sm text-gray-600">Plan</th>
+                        <th class="text-left py-3 px-4 font-semibold text-sm text-gray-600">Start Date</th>
+                        <th class="text-left py-3 px-4 font-semibold text-sm text-gray-600">End Date</th>
+                        <th class="text-left py-3 px-4 font-semibold text-sm text-gray-600">Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for subscription in subscriptions %}
+                        <tr class="border-b border-gray-200 hover:bg-gray-50">
+                            <td class="py-3 px-4 text-gray-800">{{ subscription.plan.name|default:"N/A" }}</td>
+                            <td class="py-3 px-4 text-gray-800">{{ subscription.start_date|date:"Y-m-d H:i"|default:"N/A" }}</td>
+                            <td class="py-3 px-4 text-gray-800">{{ subscription.end_date|date:"Y-m-d H:i"|default:"N/A" }}</td>
+                            <td class="py-3 px-4 text-gray-800">{{ subscription.status|title|default:"N/A" }}</td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    {% else %}
+        <p class="text-gray-600 mb-6">No subscriptions found.</p>
+    {% endif %}
+
+    <h2 class="text-xl font-semibold mb-4 text-gray-800">Order History</h2>
+    {% if orders %}
+        <div class="overflow-x-auto mb-6">
+            <table class="min-w-full">
+                <thead>
+                    <tr class="border-b border-gray-200">
+                        <th class="text-left py-3 px-4 font-semibold text-sm text-gray-600">Flavor Name</th>
+                        <th class="text-left py-3 px-4 font-semibold text-sm text-gray-600">Billing Cycle</th>
+                        <th class="text-left py-3 px-4 font-semibold text-sm text-gray-600">vCPUs</th>
+                        <th class="text-left py-3 px-4 font-semibold text-sm text-gray-600">RAM (GB)</th>
+                        <th class="text-left py-3 px-4 font-semibold text-sm text-gray-600">OS Storage (GB)</th>
+                        <th class="text-left py-3 px-4 font-semibold text-sm text-gray-600">Data Storage (GB)</th>
+                        <th class="text-left py-3 px-4 font-semibold text-sm text-gray-600">OS</th>
+                        <th class="text-left py-3 px-4 font-semibold text-sm text-gray-600">Price</th>
+                        <th class="text-left py-3 px-4 font-semibold text-sm text-gray-600">Created At</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for order in orders %}
+                        <tr class="border-b border-gray-200 hover:bg-gray-50">
+                            <td class="py-3 px-4 text-gray-800">{{ order.flavor_name|default:"N/A" }}</td>
+                            <td class="py-3 px-4 text-gray-800">{{ order.billing_cycle|title|default:"N/A" }}</td>
+                            <td class="py-3 px-4 text-gray-800">{{ order.vcpu|default:"N/A" }}</td>
+                            <td class="py-3 px-4 text-gray-800">{{ order.ram|default:"N/A" }}</td>
+                            <td class="py-3 px-4 text-gray-800">{{ order.os_storage|default:"N/A" }}</td>
+                            <td class="py-3 px-4 text-gray-800">{{ order.data_storage|default:"N/A" }}</td>
+                            <td class="py-3 px-4 text-gray-800">{{ order.os|default:"N/A" }}</td>
+                            <td class="py-3 px-4 text-gray-800">{{ order.price|default:"N/A" }} ETB</td>
+                            <td class="py-3 px-4 text-gray-800">{{ order.created_at|date:"Y-m-d H:i"|default:"N/A" }}</td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    {% else %}
+        <p class="text-gray-600 mb-6">No orders found.</p>
+    {% endif %}
+
+    <h2 class="text-xl font-semibold mb-4 text-gray-800">Invoice History</h2>
+    {% if invoices %}
+        <div class="overflow-x-auto mb-6">
+            <table class="min-w-full">
+                <thead>
+                    <tr class="border-b border-gray-200">
+                        <th class="text-left py-3 px-4 font-semibold text-sm text-gray-600">Invoice Number</th>
+                        <th class="text-left py-3 px-4 font-semibold text-sm text-gray-600">Amount</th>
+                        <th class="text-left py-3 px-4 font-semibold text-sm text-gray-600">Issue Date</th>
+                        <th class="text-left py-3 px-4 font-semibold text-sm text-gray-600">Due Date</th>
+                        <th class="text-left py-3 px-4 font-semibold text-sm text-gray-600">Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for invoice in invoices %}
+                        <tr class="border-b border-gray-200 hover:bg-gray-50">
+                            <td class="py-3 px-4 text-gray-800">{{ invoice.invoice_number|default:"N/A" }}</td>
+                            <td class="py-3 px-4 text-gray-800">{{ invoice.total|default:"N/A" }} {{ invoice.total_currency }}</td>
+                            <td class="py-3 px-4 text-gray-800">{{ invoice.issue_date|date:"Y-m-d H:i"|default:"N/A" }}</td>
+                            <td class="py-3 px-4 text-gray-800">{{ invoice.due_date|date:"Y-m-d H:i"|default:"N/A" }}</td>
+                            <td class="py-3 px-4 text-gray-800">{{ invoice.status|title|default:"N/A" }}</td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    {% else %}
+        <p class="text-gray-600 mb-6">No invoices found.</p>
+    {% endif %}
+
+    <h2 class="text-xl font-semibold mb-4 text-gray-800">Payment History</h2>
+    {% if payments %}
+        <div class="overflow-x-auto">
+            <table class="min-w-full">
+                <thead>
+                    <tr class="border-b border-gray-200">
+                        <th class="text-left py-3 px-4 font-semibold text-sm text-gray-600">Invoice Number</th>
+                        <th class="text-left py-3 px-4 font-semibold text-sm text-gray-600">Amount</th>
+                        <th class="text-left py-3 px-4 font-semibold text-sm text-gray-600">Payment Method</th>
+                        <th class="text-left py-3 px-4 font-semibold text-sm text-gray-600">Transaction ID</th>
+                        <th class="text-left py-3 px-4 font-semibold text-sm text-gray-600">Payment Date</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for payment in payments %}
+                        <tr class="border-b border-gray-200 hover:bg-gray-50">
+                            <td class="py-3 px-4 text-gray-800">{{ payment.invoice.invoice_number|default:"N/A" }}</td>
+                            <td class="py-3 px-4 text-gray-800">{{ payment.amount|default:"N/A" }} {{ payment.invoice.total_currency }}</td>
+                            <td class="py-3 px-4 text-gray-800">{{ payment.payment_method|title|default:"N/A" }}</td>
+                            <td class="py-3 px-4 text-gray-800">{{ payment.transaction_id|default:"N/A" }}</td>
+                            <td class="py-3 px-4 text-gray-800">{{ payment.payment_date|date:"Y-m-d H:i"|default:"N/A" }}</td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    {% else %}
+        <p class="text-gray-600">No payments found.</p>
+    {% endif %}
+</div>
+{% endblock %}

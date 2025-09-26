@@ -51,14 +51,14 @@
             <h1 class="text-4xl lg:text-5xl font-extrabold text-white mb-4 animate-float">Welcome to OCloud</h1>
             <p class="text-lg text-white mb-6">Login to get started with our IaaS services.</p>
             <div class="flex justify-center lg:justify-start space-x-4">
-                <a href="{% url 'landing_page' %}" class="px-6 py-3 bg-gray-900 text-white font-semibold rounded-lg shadow-md hover:bg-gray-800 transition-colors duration-300">Learn More</a>
+                <a href="{% url 'core:landing_page' %}" class="px-6 py-3 bg-gray-900 text-white font-semibold rounded-lg shadow-md hover:bg-gray-800 transition-colors duration-300">Learn More</a>
                 <a href="{% url 'accounts:register' %}" class="px-6 py-3 bg-red-600 text-white font-semibold rounded-lg shadow-md hover:bg-red-700 transition-colors duration-300">Sign Up</a>
             </div>
         </div>
 
         <div class="lg:w-1/2 max-w-md w-full bg-white rounded-lg shadow-xl p-8 z-10">
             <div class="text-center mb-6">
-                <a href="{% url 'landing_page' %}">
+                <a href="{% url 'core:landing_page' %}">
                     <img src="{% static 'img/logo-b.png' %}" alt="OCloud Logo" class="w-32 mx-auto mb-4">
                 </a>
                 <h2 class="text-3xl text-gray-800">Login</h2>

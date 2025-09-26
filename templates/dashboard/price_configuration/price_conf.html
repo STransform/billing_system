@@ -1,4 +1,4 @@
-{% extends 'dashboard/base.html' %}
+{% extends 'dashboard/common/base.html' %}
 
 {% block page_title %}
 Pricing Configuration
@@ -73,12 +73,12 @@ Pricing Configuration
     
     const updateAddButtonUrl = (activeTabId) => {
         let url = '';
-        if (activeTabId === 'flavor-tab') url = "{% url 'price_create' model_name='flavor' %}";
-        else if (activeTabId === 'volume-tab') url = "{% url 'price_create' model_name='volume' %}";
-        else if (activeTabId === 'ip-tab') url = "{% url 'price_create' model_name='ip' %}";
-        else if (activeTabId === 'router-tab') url = "{% url 'price_create' model_name='router' %}";
-        else if (activeTabId === 'snapshot-tab') url = "{% url 'price_create' model_name='snapshot' %}";
-        else if (activeTabId === 'image-tab') url = "{% url 'price_create' model_name='image' %}";
+        if (activeTabId === 'flavor-tab') url = "{% url 'core:price_create' model_name='flavor' %}";
+        else if (activeTabId === 'volume-tab') url = "{% url 'core:price_create' model_name='volume' %}";
+        else if (activeTabId === 'ip-tab') url = "{% url 'core:price_create' model_name='ip' %}";
+        else if (activeTabId === 'router-tab') url = "{% url 'core:price_create' model_name='router' %}";
+        else if (activeTabId === 'snapshot-tab') url = "{% url 'core:price_create' model_name='snapshot' %}";
+        else if (activeTabId === 'image-tab') url = "{% url 'core:price_create' model_name='image' %}";
         addPriceBtn.setAttribute('data-url', url);
     };
 

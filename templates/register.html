@@ -7,10 +7,10 @@
     <form method="post" class="space-y-8">
       {% csrf_token %}
       
-      <!-- 2-column grid -->
+ 
       <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
         
-        <!-- Left side -->
+        
         <div class="space-y-7">
           <div>
             <label class="block text-base font-medium text-gray-700">{{ form.username.label }}</label>
@@ -38,7 +38,7 @@
           </div>
         </div>
         
-        <!-- Right side -->
+     
         <div class="space-y-6">
           <div>
             <label class="block text-base font-medium text-gray-700">{{ form.company_name.label }}</label>
@@ -59,7 +59,7 @@
         </div>
       </div>
 
-      <!-- Submit -->
+   
       <div class="mx-auto w-14">
         <button type="submit"
           class="px-6 py-3 bg-red-600 text-white font-semibold rounded-lg shadow-md hover:bg-gray-900 
