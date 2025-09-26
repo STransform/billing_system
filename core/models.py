@@ -10,7 +10,7 @@ def generate_invoice_number():
     The sequential number increments daily, starting from 1.
     """
     today = timezone.now().date()
-    date_str = today.strftime('%m%d%Y')  # Format as MMDDYYYY, e.g., 09252025
+    date_str = today.strftime('%m%d%Y') 
     prefix = 'INV-'
     suffix = f'-{date_str}'
     
@@ -18,7 +18,7 @@ def generate_invoice_number():
     for attempt in range(max_retries):
         try:
             with transaction.atomic():
-                # Lock invoices for today to prevent concurrent updates
+                #today to prevent concurrent updates
                 last_invoice = Invoice.objects.filter(
                     invoice_number__startswith=prefix,
                     invoice_number__endswith=suffix
@@ -233,12 +233,26 @@ class SubscriptionPlan(models.Model):
     data_storage = models.IntegerField(default=50)
     hourly_price = models.DecimalField(max_digits=12, decimal_places=2)
     monthly_price = models.DecimalField(max_digits=12, decimal_places=2)
+    quarterly_price = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True)
+    semi_annual_price = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True)
+    yearly_price = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True)
     price_currency = models.CharField(max_length=10, default='ETB')
     flavor_id = models.CharField(max_length=100, unique=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+
     def __str__(self):
         return self.name
+
+    def get_price_for_billing_cycle(self, billing_cycle):
+        """Return the price for the specified billing cycle."""
+        price_map = {
+            'monthly': self.monthly_price,
+            'quarterly': self.quarterly_price or self.monthly_price * Decimal('3'),
+            'semi-annual': self.semi_annual_price or self.monthly_price * Decimal('6'),
+            'yearly': self.yearly_price or self.monthly_price * Decimal('12'),
+        }
+        return price_map.get(billing_cycle, self.monthly_price)
 class Cart(models.Model):
     session_id = models.CharField(max_length=255, unique=True, blank=True, null=True)
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True)
@@ -260,8 +274,10 @@ class CartItem(models.Model):
     )
     quantity = models.PositiveIntegerField(default=1)
     price = models.DecimalField(max_digits=12, decimal_places=2)
+
     def subtotal(self):
         return self.price * self.quantity
+
     def __str__(self):
         return f"{self.quantity} x {self.plan.name} ({self.billing_cycle})"
 class Customer(models.Model):
@@ -306,6 +322,11 @@ class Customer(models.Model):
 class Subscription(models.Model):
     customer = models.ForeignKey(Customer, on_delete=models.CASCADE)
     plan = models.ForeignKey(SubscriptionPlan, on_delete=models.CASCADE)
+    billing_cycle = models.CharField(
+        max_length=50,
+        choices=[("monthly", "Monthly"), ("quarterly", "Quarterly"), ("semi-annual", "Semi-Annual"), ("yearly", "Yearly")],
+        default="monthly"
+    )
     start_date = models.DateTimeField(auto_now_add=True)
     end_date = models.DateTimeField(null=True, blank=True)
     status = models.CharField(
@@ -315,5 +336,6 @@ class Subscription(models.Model):
     )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+
     def __str__(self):
-        return f"{self.plan.name} for {self.customer}"
+        return f"{self.plan.name} ({self.billing_cycle}) for {self.customer}"

@@ -93,6 +93,13 @@ def landing_page(request):
             )
         flavors = SubscriptionPlan.objects.all()
 
+    # Compute prices for each billing cycle
+    for flavor in flavors:
+        flavor.monthly_price_display = flavor.monthly_price
+        flavor.quarterly_price_display = flavor.get_price_for_billing_cycle('quarterly')
+        flavor.semi_annual_price_display = flavor.get_price_for_billing_cycle('semi-annual')
+        flavor.yearly_price_display = flavor.get_price_for_billing_cycle('yearly')
+
     form = ContactForm()
     if request.method == "POST":
         form = ContactForm(request.POST)
@@ -227,12 +234,15 @@ class CustomerDashboardView(LoginRequiredMixin, VerificationRequiredMixin, View)
                     for item in cart.items.all():
                         days = days_map.get(item.billing_cycle, 30)
                         subscription = Subscription.objects.create(
-                            customer=customer,
-                            plan=item.plan,
-                            status='pending',
-                            start_date=timezone.now(),
-                            end_date=timezone.now() + timedelta(days=days)
-                        )
+                        customer=customer,
+                        plan=item.plan,
+                        billing_cycle=item.billing_cycle,
+                        status='pending',
+                        start_date=timezone.now(),
+                        end_date=timezone.now() + timedelta(days=days)
+                    )
+
+
                         created_subscriptions.append(subscription)
                         amount = item.price
                         tax = amount * tax_rate
@@ -252,6 +262,9 @@ class CustomerDashboardView(LoginRequiredMixin, VerificationRequiredMixin, View)
                         )
                         invoices.append(invoice)
                     cart.delete()
+                    # Clear checkout_cart from session
+                    if 'checkout_cart' in request.session:
+                        del request.session['checkout_cart']
             except Exception as e:
                 messages.error(request, f"Error processing order: {str(e)}")
                 return redirect('core:customer_dashboard')
@@ -287,34 +300,48 @@ class CustomerSubscriptionsView(LoginRequiredMixin, VerificationRequiredMixin, V
             customer = Customer.objects.get(user=request.user)
             subscriptions = Subscription.objects.filter(customer=customer).select_related('plan').order_by('-start_date')
 
-            # Handle pending subscription plan from session
-            pending_plan_id = request.session.get('pending_subscription_plan_id')
-            draft_subscription = None
+            # Compute prices and total prices (including 15% VAT) for each subscription
+            subscription_data = []
+            VAT_RATE = Decimal('0.15')  # 15% VAT
+            for subscription in subscriptions:
+                base_price = subscription.plan.get_price_for_billing_cycle(subscription.billing_cycle)
+                vat_amount = base_price * VAT_RATE
+                total_price = base_price + vat_amount
+                subscription_data.append({
+                    'subscription': subscription,
+                    'base_price': base_price,
+                    'total_price': total_price  # Include total price with VAT
+                })
 
-            if pending_plan_id:
+            # Handle pending subscription from session (for guest users who logged in)
+            pending_subscription = None
+            if 'pending_subscription' in request.session:
+                pending_data = request.session['pending_subscription']
                 try:
-                    plan = SubscriptionPlan.objects.get(id=pending_plan_id)
-                    draft_subscription, created = Subscription.objects.get_or_create(
+                    plan = SubscriptionPlan.objects.get(id=pending_data['plan_id'])
+                    base_price = plan.get_price_for_billing_cycle(pending_data['billing_cycle'])
+                    vat_amount = base_price * VAT_RATE
+                    total_price = base_price + vat_amount
+                    pending_subscription, created = Subscription.objects.get_or_create(
                         customer=customer,
                         plan=plan,
+                        billing_cycle=pending_data['billing_cycle'],
                         status='pending',
                         defaults={
                             'start_date': timezone.now(),
-                            'end_date': timezone.now() + timedelta(days=30)
+                            'end_date': timezone.now() + timedelta(days=self.get_days_for_billing_cycle(pending_data['billing_cycle']))
                         }
                     )
                     if created:
-                        messages.info(request, f"{plan.name} has been added to your pending subscriptions.")
-                    if 'pending_subscription_plan_id' in request.session:
-                        del request.session['pending_subscription_plan_id']
+                        messages.info(request, f"{plan.name} ({pending_data['billing_cycle'].capitalize()}) has been added to your pending subscriptions.")
+                    del request.session['pending_subscription']
                 except SubscriptionPlan.DoesNotExist:
                     messages.error(request, "Selected subscription plan is not available.")
-                    if 'pending_subscription_plan_id' in request.session:
-                        del request.session['pending_subscription_plan_id']
+                    del request.session['pending_subscription']
 
             context = {
-                'subscriptions': subscriptions,
-                'draft_subscription': draft_subscription,
+                'subscriptions': subscription_data,  # Pass subscription_data with base_price and total_price
+                'pending_subscription': pending_subscription,
                 'customer': customer,
                 'model_code': 'CustomerSubscriptions',
             }
@@ -334,15 +361,18 @@ class CustomerSubscriptionsView(LoginRequiredMixin, VerificationRequiredMixin, V
                     customer__user=request.user,
                     status='pending'
                 )
+                base_price = subscription.plan.get_price_for_billing_cycle(subscription.billing_cycle)
+                vat_amount = base_price * Decimal('0.15')  # 15% VAT
+                total_price = base_price + vat_amount
                 invoice = Invoice.objects.create(
                     customer=subscription.customer,
                     subscription=subscription,
-                    amount=subscription.plan.monthly_price,
+                    amount=base_price,  # Store base price
                     due_date=timezone.now() + timedelta(days=30),
                     issue_date=timezone.now(),
                     status='pending',
-                    tax=Decimal('0.00'),
-                    total=subscription.plan.monthly_price,
+                    tax=vat_amount,  # Store VAT amount
+                    total=total_price,  # Store total price with VAT
                     subtotal_currency='ETB',
                     tax_currency='ETB',
                     total_currency='ETB',
@@ -384,6 +414,15 @@ class CustomerSubscriptionsView(LoginRequiredMixin, VerificationRequiredMixin, V
                 messages.error(request, "Subscription not found.")
 
         return redirect('core:customer_subscriptions')
+
+    def get_days_for_billing_cycle(self, billing_cycle):
+        days_map = {
+            'monthly': 30,
+            'quarterly': 90,
+            'semi-annual': 180,
+            'yearly': 365
+        }
+        return days_map.get(billing_cycle, 30)
 
 class CustomerInvoicesView(LoginRequiredMixin, VerificationRequiredMixin, View):
     template_name = 'dashboard/customer/customer_invoices.html'
@@ -461,22 +500,29 @@ class CustomerProfileCreateView(LoginRequiredMixin, View):
                 if pending_plan_id:
                     try:
                         plan = SubscriptionPlan.objects.get(id=pending_plan_id)
+                        billing_cycle = request.session.get('pending_subscription', {}).get('billing_cycle', 'monthly')
+                        days = {'monthly': 30, 'quarterly': 90, 'semi-annual': 180, 'yearly': 365}.get(billing_cycle, 30)
                         Subscription.objects.create(
                             customer=customer,
                             plan=plan,
+                            billing_cycle=billing_cycle,
                             status='pending',
                             start_date=timezone.now(),
-                            end_date=self.calculate_end_date(plan)
+                            end_date=timezone.now() + timedelta(days=days)
                         )
-                        messages.info(request, f"{plan.name} has been added to your pending subscriptions.")
+                        messages.info(request, f"{plan.name} ({billing_cycle.capitalize()}) has been added to your pending subscriptions.")
                         if 'pending_subscription_plan_id' in request.session:
                             del request.session['pending_subscription_plan_id']
+                        if 'pending_subscription' in request.session:
+                            del request.session['pending_subscription']
                     except SubscriptionPlan.DoesNotExist:
                         messages.error(request, "Selected subscription plan no longer available.")
                         if 'pending_subscription_plan_id' in request.session:
                             del request.session['pending_subscription_plan_id']
+                        if 'pending_subscription' in request.session:
+                            del request.session['pending_subscription']
 
-                # Transfer guest cart to authenticated user
+                # Convert guest cart to authenticated user
                 session_key = request.session.session_key
                 guest_cart = Cart.objects.filter(session_id=session_key, user__isnull=True).first()
                 if guest_cart:
@@ -508,6 +554,7 @@ class CustomerProfileCreateView(LoginRequiredMixin, View):
                         Subscription.objects.get_or_create(
                             customer=customer,
                             plan=item.plan,
+                            billing_cycle=item.billing_cycle,
                             status='pending',
                             defaults={
                                 'start_date': timezone.now(),
@@ -597,21 +644,21 @@ def payment(request, invoice_id):
 def add_to_cart(request, plan_id=None):
     if request.method == 'POST':
         plan_id = request.POST.get('plan_id', plan_id)
+        billing_cycle = request.POST.get('billing_cycle', 'monthly')
 
     if not plan_id:
         messages.error(request, "No plan selected.")
         return redirect('core:landing_page')
 
     plan = get_object_or_404(SubscriptionPlan, id=plan_id)
-    billing_cycle = request.POST.get('billing_cycle', 'monthly')
-    billing_multipliers = {
-        'monthly': 1,
-        'quarterly': 3,
-        'semi-annual': 6,
-        'yearly': 12,
-    }
-    multiplier = billing_multipliers.get(billing_cycle, 1)
-    price = plan.monthly_price * multiplier
+    
+    # Validate billing cycle
+    valid_billing_cycles = ['monthly', 'quarterly', 'semi-annual', 'yearly']
+    if billing_cycle not in valid_billing_cycles:
+        billing_cycle = 'monthly'
+
+    # Get the price for the selected billing cycle
+    price = plan.get_price_for_billing_cycle(billing_cycle)
 
     if request.user.is_authenticated:
         cart, created = Cart.objects.get_or_create(
@@ -629,8 +676,12 @@ def add_to_cart(request, plan_id=None):
             user=None,
             defaults={'created_at': timezone.now()}
         )
-        # Store plan_id in session for guest users
-        request.session['pending_subscription_plan_id'] = plan_id
+        # Store plan_id and billing_cycle in session for guest users
+        request.session['pending_subscription'] = {
+            'plan_id': plan_id,
+            'billing_cycle': billing_cycle,
+            'price': str(price)  # Convert Decimal to string for session storage
+        }
 
     CartItem.objects.create(
         cart=cart,
@@ -640,9 +691,9 @@ def add_to_cart(request, plan_id=None):
     )
 
     if request.user.is_authenticated:
-        messages.success(request, f"{plan.name} added to cart!")
+        messages.success(request, f"{plan.name} ({billing_cycle.capitalize()}) added to cart!")
     else:
-        messages.info(request, f"{plan.name} added to cart! Please login to checkout.")
+        messages.info(request, f"{plan.name} ({billing_cycle.capitalize()}) added to cart! Please login to checkout.")
 
     return redirect('core:cart_view')
 
@@ -667,9 +718,15 @@ def cart_view(request):
 
     if cart:
         total, vat, grand_total = cart.calculate_total()
-        context = {'cart': cart, 'total': total, 'vat': vat, 'grand_total': grand_total}
+        context = {
+            'cart': cart,
+            'total': total,
+            'vat': vat,
+            'grand_total': grand_total,
+            'model_code': 'CartView'
+        }
     else:
-        context = {'cart': None}
+        context = {'cart': None, 'model_code': 'CartView'}
 
     if request.method == 'POST' and request.POST.get('action') == 'proceed_to_checkout':
         if not request.user.is_authenticated:
@@ -679,6 +736,15 @@ def cart_view(request):
             messages.warning(request, "Please create a customer profile to proceed.")
             return redirect('core:customer_profile_create')
         else:
+            # Store cart details in session for authenticated users
+            if cart and cart.items.exists():
+                request.session['checkout_cart'] = [
+                    {
+                        'plan_id': item.plan.id,
+                        'billing_cycle': item.billing_cycle,
+                        'price': str(item.price)
+                    } for item in cart.items.all()
+                ]
             return redirect('core:customer_dashboard')  # Redirect to dashboard for confirmation
 
     return render(request, 'cart.html', context)

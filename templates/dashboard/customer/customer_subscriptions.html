@@ -27,14 +27,12 @@ Your Subscriptions
                     <thead class="bg-gray-50">
                         <tr>
                             <th class="px-6 py-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">Plan Name</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">Billing Cycle</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">Total Price (incl. 15% VAT)</th>
                             <th class="px-6 py-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">vCPU</th>
                             <th class="px-6 py-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">RAM (GB)</th>
                             <th class="px-6 py-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">OS Storage (GB)</th>
                             <th class="px-6 py-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">Data Storage (GB)</th>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">Hourly Price</th>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">Monthly Price</th>
-                           
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">Flavor ID</th>
                             <th class="px-6 py-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">Status</th>
                             <th class="px-6 py-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">Start Date</th>
                             <th class="px-6 py-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">End Date</th>
@@ -42,40 +40,38 @@ Your Subscriptions
                         </tr>
                     </thead>
                     <tbody class="bg-white divide-y divide-gray-200">
-                        {% for subscription in subscriptions %}
+                        {% for sub_data in subscriptions %}
                             <tr class="hover:bg-gray-50">
-                                <td class="px-6 py-4 whitespace-nowrap text-gray-800">{{ subscription.plan.name|default:"N/A" }}</td>
-                                <td class="px-6 py-4 whitespace-nowrap text-gray-800">{{ subscription.plan.vcpu|default:"N/A" }}</td>
-                                <td class="px-6 py-4 whitespace-nowrap text-gray-800">{{ subscription.plan.ram|default:"N/A" }}</td>
-                                <td class="px-6 py-4 whitespace-nowrap text-gray-800">{{ subscription.plan.os_storage|default:"N/A" }}</td>
-                                <td class="px-6 py-4 whitespace-nowrap text-gray-800">{{ subscription.plan.data_storage|default:"N/A" }}</td>
-                                <td class="px-6 py-4 whitespace-nowrap text-gray-800">{{ subscription.plan.price_currency|default:"N/A" }} {{ subscription.plan.hourly_price|default:"N/A" }}</td>
-                                <td class="px-6 py-4 whitespace-nowrap text-gray-800">{{ subscription.plan.price_currency|default:"N/A" }} {{ subscription.plan.monthly_price|default:"N/A" }}</td>
-                               
-                                <td class="px-6 py-4 whitespace-nowrap text-gray-800">{{ subscription.plan.flavor_id|default:"N/A" }}</td>
+                                <td class="px-6 py-4 whitespace-nowrap text-gray-800">{{ sub_data.subscription.plan.name|default:"N/A" }}</td>
+                                <td class="px-6 py-4 whitespace-nowrap text-gray-800">{{ sub_data.subscription.billing_cycle|capfirst|default:"N/A" }}</td>
+                                <td class="px-6 py-4 whitespace-nowrap text-gray-800">{{ sub_data.subscription.plan.price_currency|default:"N/A" }} {{ sub_data.total_price|floatformat:2 }}</td>
+                                <td class="px-6 py-4 whitespace-nowrap text-gray-800">{{ sub_data.subscription.plan.vcpu|default:"N/A" }}</td>
+                                <td class="px-6 py-4 whitespace-nowrap text-gray-800">{{ sub_data.subscription.plan.ram|default:"N/A" }}</td>
+                                <td class="px-6 py-4 whitespace-nowrap text-gray-800">{{ sub_data.subscription.plan.os_storage|default:"N/A" }}</td>
+                                <td class="px-6 py-4 whitespace-nowrap text-gray-800">{{ sub_data.subscription.plan.data_storage|default:"N/A" }}</td>
                                 <td class="px-6 py-4 whitespace-nowrap">
                                     <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full
-                                        {% if subscription.status == 'active' %} bg-green-100 text-green-800
-                                        {% elif subscription.status == 'pending' %} bg-yellow-100 text-yellow-800
+                                        {% if sub_data.subscription.status == 'active' %} bg-green-100 text-green-800
+                                        {% elif sub_data.subscription.status == 'pending' %} bg-yellow-100 text-yellow-800
                                         {% else %} bg-red-100 text-red-800
                                         {% endif %}">
-                                        {{ subscription.status|capfirst }}
+                                        {{ sub_data.subscription.status|capfirst }}
                                     </span>
                                 </td>
-                                <td class="px-6 py-4 whitespace-nowrap text-gray-800">{{ subscription.start_date|date:"Y-m-d"|default:"N/A" }}</td>
-                                <td class="px-6 py-4 whitespace-nowrap text-gray-800">{{ subscription.end_date|date:"Y-m-d"|default:"N/A" }}</td>
+                                <td class="px-6 py-4 whitespace-nowrap text-gray-800">{{ sub_data.subscription.start_date|date:"Y-m-d"|default:"N/A" }}</td>
+                                <td class="px-6 py-4 whitespace-nowrap text-gray-800">{{ sub_data.subscription.end_date|date:"Y-m-d"|default:"N/A" }}</td>
                                 <td class="px-6 py-4 whitespace-nowrap">
-                                    {% if subscription.status == 'pending' %}
+                                    {% if sub_data.subscription.status == 'pending' %}
                                         <form method="post" action="{% url 'core:customer_subscriptions' %}" class="inline">
                                             {% csrf_token %}
                                             <input type="hidden" name="action" value="confirm">
-                                            <input type="hidden" name="subscription_id" value="{{ subscription.id }}">
+                                            <input type="hidden" name="subscription_id" value="{{ sub_data.subscription.id }}">
                                             <button type="submit" class="text-blue-600 hover:underline">Confirm</button>
                                         </form>
                                         <form method="post" action="{% url 'core:customer_subscriptions' %}" class="inline">
                                             {% csrf_token %}
                                             <input type="hidden" name="action" value="cancel">
-                                            <input type="hidden" name="subscription_id" value="{{ subscription.id }}">
+                                            <input type="hidden" name="subscription_id" value="{{ sub_data.subscription.id }}">
                                             <button type="submit" class="text-red-600 hover:underline ml-2">Cancel</button>
                                         </form>
                                     {% endif %}
@@ -83,7 +79,7 @@ Your Subscriptions
                             </tr>
                         {% empty %}
                             <tr>
-                                <td colspan="13" class="px-6 py-4 text-center text-gray-500">
+                                <td colspan="11" class="px-6 py-4 text-center text-gray-500">
                                     No subscriptions found.
                                 </td>
                             </tr>

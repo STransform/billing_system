@@ -119,11 +119,12 @@ Customer Dashboard
                 <thead>
                     <tr class="border-b border-gray-200">
                         <th class="text-left py-3 px-4 font-semibold text-sm text-gray-600">Plan Name</th>
+                        <th class="text-left py-3 px-4 font-semibold text-sm text-gray-600">Billing Cycle</th>
+                        <th class="text-left py-3 px-4 font-semibold text-sm text-gray-600">Price</th>
                         <th class="text-left py-3 px-4 font-semibold text-sm text-gray-600">vCPUs</th>
                         <th class="text-left py-3 px-4 font-semibold text-sm text-gray-600">RAM (GB)</th>
                         <th class="text-left py-3 px-4 font-semibold text-sm text-gray-600">OS Storage (GB)</th>
                         <th class="text-left py-3 px-4 font-semibold text-sm text-gray-600">Data Storage (GB)</th>
-                        <th class="text-left py-3 px-4 font-semibold text-sm text-gray-600">Monthly Price</th>
                         <th class="text-left py-3 px-4 font-semibold text-sm text-gray-600">Actions</th>
                     </tr>
                 </thead>
@@ -131,11 +132,12 @@ Customer Dashboard
                     {% for subscription in pending_subscriptions %}
                         <tr class="border-b border-gray-200 hover:bg-gray-50">
                             <td class="py-3 px-4 text-gray-800">{{ subscription.plan.name }}</td>
+                            <td class="py-3 px-4 text-gray-800">{{ subscription.billing_cycle|capfirst }}</td>
+                            <td class="py-3 px-4 text-gray-800">{{ subscription.plan.price_currency }} {{ subscription.plan.get_price_for_billing_cycle|default:subscription.plan.monthly_price }}</td>
                             <td class="py-3 px-4 text-gray-800">{{ subscription.plan.vcpu }}</td>
                             <td class="py-3 px-4 text-gray-800">{{ subscription.plan.ram }}</td>
                             <td class="py-3 px-4 text-gray-800">{{ subscription.plan.os_storage }}</td>
                             <td class="py-3 px-4 text-gray-800">{{ subscription.plan.data_storage }}</td>
-                            <td class="py-3 px-4 text-gray-800">{{ subscription.plan.price_currency }} {{ subscription.plan.monthly_price }}</td>
                             <td class="py-3 px-4">
                                 <a href="{% url 'accounts:confirm_subscription' subscription.id %}" class="text-blue-600 hover:underline">Confirm</a>
                                 <form method="post" action="{% url 'core:customer_subscriptions' %}" class="inline">

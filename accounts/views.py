@@ -88,6 +88,7 @@ def verify_email(request, token):
                     Subscription.objects.get_or_create(
                         customer=customer,
                         plan=item.plan,
+                        billing_cycle=item.billing_cycle,
                         status='pending',
                         defaults={
                             'start_date': timezone.now(),
@@ -161,6 +162,7 @@ class CustomLoginView(LoginView):
                 Subscription.objects.get_or_create(
                     customer=customer,
                     plan=plan,
+                    billing_cycle='monthly',  # Default to monthly; update if stored in session
                     status='pending',
                     defaults={
                         'start_date': timezone.now(),
@@ -189,6 +191,7 @@ class CustomLoginView(LoginView):
                 Subscription.objects.get_or_create(
                     customer=customer,
                     plan=item.plan,
+                    billing_cycle=item.billing_cycle,
                     status='pending',
                     defaults={
                         'start_date': timezone.now(),
@@ -246,12 +249,12 @@ def confirm_subscription(request, subscription_id):
             customer=subscription.customer,
             subscription=subscription,
             invoice_number=f"INV-{uuid4().hex[:8]}",
-            amount=subscription.plan.monthly_price,
+            amount=subscription.plan.get_price_for_billing_cycle(subscription.billing_cycle),
             due_date=timezone.now() + timedelta(days=30),
             issue_date=timezone.now(),
             status='pending',
             tax=Decimal('0.00'),
-            total=subscription.plan.monthly_price,
+            total=subscription.plan.get_price_for_billing_cycle(subscription.billing_cycle),
             subtotal_currency='ETB',
             tax_currency='ETB',
             total_currency='ETB',
