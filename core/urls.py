@@ -5,6 +5,8 @@ app_name = "core"
 
 urlpatterns = [
     path("", views.landing_page, name="landing_page"),
+    path('sync-subscription-plans/', views.sync_subscription_plans_view, name='sync_subscription_plans'), 
+    
     path("invoice/<int:pk>/", views.invoice_detail, name="invoice_detail"),
     path("dashboard/", views.dashboard_redirect, name="dashboard"),
     path("billing-dashboard/", views.billing_dashboard, name="billing_dashboard"),
@@ -23,8 +25,10 @@ urlpatterns = [
     path("checkout/", views.checkout, name="checkout"),
     path("payment/<int:invoice_id>/", views.payment, name="payment"),
     path("customer_list/", views.customer_list, name="customer_list"),
+     path('customers/detail/<int:pk>/', views.CustomerDetailView.as_view(), name='customer_detail_view'),
     path("admin-invoices/", views.invoice_list, name="invoice_list"),
     path("subscription-plans/", views.subscription_plan_list, name="subscription_plan_list"),
     path("subscriptions/", views.subscription_list, name="subscription_list"),
     path("contact-submissions/", views.contact_submission_list, name="contact_submission_list"),
+    path('subscriptions/detail/<int:pk>/', views.AdminSubscriptionDetailView.as_view(), name='admin_subscription_detail'),
 ]

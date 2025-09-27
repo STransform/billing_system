@@ -6,43 +6,76 @@ Your Invoices
 <h1 class="text-2xl font-semibold text-gray-800 hidden md:block py-2">Your Invoices</h1>
 <div class="bg-white p-6 rounded-lg shadow-md">
     <h2 class="text-xl font-semibold mb-4 text-gray-800">Invoice List</h2>
+    <p class="text-sm text-gray-600 mb-4">Total Invoices: {{ invoice_count }}</p>
     <div class="overflow-x-auto">
         {% if invoices %}
-            <table class="min-w-full">
-                <thead>
-                    <tr class="border-b border-gray-200">
-                        <th class="text-left py-3 px-4 font-semibold text-sm text-gray-600">Invoice Number</th>
-                        <th class="text-left py-3 px-4 font-semibold text-sm text-gray-600">Amount</th>
-                        <th class="text-left py-3 px-4 font-semibold text-sm text-gray-600">Status</th>
-                        <th class="text-left py-3 px-4 font-semibold text-sm text-gray-600">Issue Date</th>
-                        <th class="text-left py-3 px-4 font-semibold text-sm text-gray-600">Action</th>
+            <table class="min-w-full divide-y divide-gray-200">
+                <thead class="bg-gray-50">
+                    <tr>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Invoice Number</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Amount</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Issue Date</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Action</th>
                     </tr>
                 </thead>
-                <tbody>
+                <tbody class="bg-white divide-y divide-gray-200">
                     {% for invoice in invoices %}
-                        <tr class="border-b border-gray-200 hover:bg-gray-50">
-                            <td class="py-3 px-4 text-gray-800">{{ invoice.invoice_number }}</td>
-                            <td class="py-3 px-4 text-gray-800">{{ invoice.total }} {{ invoice.total_currency }}</td>
-                            <td class="py-3 px-4 text-gray-800">
+                        <tr class="table-row-hover hover:bg-gray-50">
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-800 font-medium">{{ invoice.invoice_number }}</td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-800 font-medium">{{ invoice.total }} {{ invoice.total_currency }}</td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-800 font-medium">
                                 {% if invoice.status == 'paid' %}
                                     <span class="text-green-600">Paid</span>
                                 {% else %}
                                     <span class="text-red-600">Pending</span>
                                 {% endif %}
                             </td>
-                            <td class="py-3 px-4 text-gray-800">{{ invoice.issue_date|date:"Y-m-d" }}</td>
-                            <td class="py-3 px-4">
-                                <a href="{% url 'core:invoice_detail' invoice.id %}" class="text-blue-600 hover:underline">View</a>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-800 font-medium">{{ invoice.issue_date|date:"Y-m-d" }}</td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm flex space-x-3">
+                                <a href="{% url 'core:invoice_detail' invoice.id %}" class="inline-flex items-center px-3 py-1 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-200">View</a>
                                 {% if invoice.status == 'pending' %}
-                                    | <a href="{% url 'core:payment' invoice.id %}" class="text-blue-600 hover:underline">Pay</a>
+                                    <form method="post" action="{% url 'core:payment' invoice.id %}" class="inline">
+                                        {% csrf_token %}
+                                        <button type="submit" class="inline-flex items-center px-3 py-1 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors duration-200">Pay</button>
+                                    </form>
                                 {% endif %}
+                            </td>
+                        </tr>
+                    {% empty %}
+                        <tr>
+                            <td colspan="5" class="px-6 py-4 text-center text-sm text-gray-500 font-medium">
+                                No invoices found.
                             </td>
                         </tr>
                     {% endfor %}
                 </tbody>
             </table>
+            {% if invoices.has_other_pages %}
+                <div class="mt-6">
+                    <nav class="flex justify-center">
+                        <ul class="inline-flex items-center -space-x-px text-sm">
+                            {% if invoices.has_previous %}
+                                <li>
+                                    <a href="?page={{ invoices.previous_page_number }}" class="px-3 py-2 ml-0 leading-tight text-gray-500 bg-white border border-gray-300 rounded-l-lg hover:bg-gray-100 hover:text-gray-700 transition duration-200">Previous</a>
+                                </li>
+                            {% endif %}
+                            {% for num in invoices.paginator.page_range %}
+                                <li>
+                                    <a href="?page={{ num }}" class="px-3 py-2 {% if invoices.number == num %}text-white bg-blue-600 border-blue-600{% else %}text-gray-500 bg-white border-gray-300 hover:bg-gray-100 hover:text-gray-700{% endif %} border transition duration-200">{{ num }}</a>
+                                </li>
+                            {% endfor %}
+                            {% if invoices.has_next %}
+                                <li>
+                                    <a href="?page={{ invoices.next_page_number }}" class="px-3 py-2 leading-tight text-gray-500 bg-white border border-gray-300 rounded-r-lg hover:bg-gray-100 hover:text-gray-700 transition duration-200">Next</a>
+                                </li>
+                            {% endif %}
+                        </ul>
+                    </nav>
+                </div>
+            {% endif %}
         {% else %}
-            <p class="text-gray-600">No invoices found.</p>
+            <p class="text-gray-600 text-center py-4 font-medium">No invoices found.</p>
         {% endif %}
     </div>
 </div>

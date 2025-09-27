@@ -11,6 +11,8 @@ from django.template.loader import render_to_string
 from django.conf import settings
 from django.core.mail import send_mail
 from requests import request
+from django.views.generic import DetailView
+from core.utils import sync_subscription_plans
 from .forms import ContactForm, CustomerForm
 from openstack import connection
 from openstack.exceptions import SDKException
@@ -37,62 +39,15 @@ class VerificationRequiredMixin(UserPassesTestMixin):
         return redirect('core:customer_profile_create')
 
 def landing_page(request):
-    flavors = []
-    try:
-        conn = connection.from_config(cloud_name="kolla-admin")
-        openstack_flavors = list(conn.compute.flavors())
-        for os_flavor in openstack_flavors:
-            flavor_price = FlavorPrice.objects.filter(flavor_id=os_flavor.id).first()
-            SubscriptionPlan.objects.update_or_create(
-                flavor_id=os_flavor.id,
-                defaults={
-                    'name': os_flavor.name,
-                    'vcpu': os_flavor.vcpus,
-                    'ram': os_flavor.ram // 1024,
-                    'os_storage': 30,
-                    'data_storage': 50,
-                    'hourly_price': flavor_price.hourly_price if flavor_price else Decimal('0.10'),
-                    'monthly_price': flavor_price.monthly_price if flavor_price else (
-                        (os_flavor.vcpus * Decimal('2700')) +
-                        (Decimal(os_flavor.ram // 1024) * Decimal('2500')) +
-                        (Decimal('30') * Decimal('20')) +
-                        (Decimal('50') * Decimal('20'))
-                    ),
-                    'price_currency': flavor_price.price_currency if flavor_price else 'ETB',
-                }
-            )
-        flavors = SubscriptionPlan.objects.all()
-    except SDKException:
-        messages.warning(request, "OpenStack connection failed. Using fallback data. Contact OTech for API access.")
-        hardcoded_flavors = [
-            {"name": "OSTD.1-2", "vcpu": 1, "ram": 2, "os_storage": 30, "data_storage": 50, "hourly_price": Decimal('0.10'), "monthly_price": Decimal('6700'), "price_currency": "ETB", "flavor_id": "ostd.1-2"},
-            {"name": "OSTD.2-4", "vcpu": 2, "ram": 4, "os_storage": 30, "data_storage": 50, "hourly_price": Decimal('0.20'), "monthly_price": Decimal('11900'), "price_currency": "ETB", "flavor_id": "ostd.2-4"},
-            {"name": "OSTD.2-8", "vcpu": 2, "ram": 8, "os_storage": 30, "data_storage": 50, "hourly_price": Decimal('0.30'), "monthly_price": Decimal('17100'), "price_currency": "ETB", "flavor_id": "ostd.2-8"},
-            {"name": "OSTD.4-8", "vcpu": 4, "ram": 8, "os_storage": 30, "data_storage": 50, "hourly_price": Decimal('0.40'), "monthly_price": Decimal('22500'), "price_currency": "ETB", "flavor_id": "ostd.4-8"},
-            {"name": "OSTD.4-16", "vcpu": 4, "ram": 16, "os_storage": 30, "data_storage": 50, "hourly_price": Decimal('0.50'), "monthly_price": Decimal('30500'), "price_currency": "ETB", "flavor_id": "ostd.4-16"},
-            {"name": "OSTD.8-16", "vcpu": 8, "ram": 16, "os_storage": 30, "data_storage": 50, "hourly_price": Decimal('0.60'), "monthly_price": Decimal('38700'), "price_currency": "ETB", "flavor_id": "ostd.8-16"},
-            {"name": "OSTD.8-24", "vcpu": 8, "ram": 24, "os_storage": 30, "data_storage": 50, "hourly_price": Decimal('0.70'), "monthly_price": Decimal('46700'), "price_currency": "ETB", "flavor_id": "ostd.8-24"},
-            {"name": "OSTD.12-24", "vcpu": 12, "ram": 24, "os_storage": 30, "data_storage": 50, "hourly_price": Decimal('0.80'), "monthly_price": Decimal('55100'), "price_currency": "ETB", "flavor_id": "ostd.12-24"},
-            {"name": "OSTD.12-32", "vcpu": 12, "ram": 32, "os_storage": 30, "data_storage": 50, "hourly_price": Decimal('0.90'), "monthly_price": Decimal('63100'), "price_currency": "ETB", "flavor_id": "ostd.12-32"},
-            {"name": "OSTD.16-32", "vcpu": 16, "ram": 32, "os_storage": 30, "data_storage": 50, "hourly_price": Decimal('1.00'), "monthly_price": Decimal('71500'), "price_currency": "ETB", "flavor_id": "ostd.16-32"},
-            {"name": "OSTD.16-48", "vcpu": 16, "ram": 48, "os_storage": 30, "data_storage": 50, "hourly_price": Decimal('1.10'), "monthly_price": Decimal('87500'), "price_currency": "ETB", "flavor_id": "ostd.16-48"},
-        ]
-        for f in hardcoded_flavors:
-            SubscriptionPlan.objects.update_or_create(
-                flavor_id=f["flavor_id"],
-                defaults={
-                    'name': f["name"],
-                    'vcpu': f["vcpu"],
-                    'ram': f["ram"],
-                    'os_storage': f["os_storage"],
-                    'data_storage': f["data_storage"],
-                    'hourly_price': f["hourly_price"],
-                    'monthly_price': f["monthly_price"],
-                    'price_currency': f["price_currency"],
-                }
-            )
-        flavors = SubscriptionPlan.objects.all()
-
+    # Sync subscription plans with OpenStack
+    result = sync_subscription_plans(request)
+    if isinstance(result, tuple) and len(result) == 2:
+        success, flavors = result
+    else:
+        success = False
+        flavors = result if result else SubscriptionPlan.objects.all()
+        messages.error(request, "Error syncing plans. Using existing plans.")
+    
     # Compute prices for each billing cycle
     for flavor in flavors:
         flavor.monthly_price_display = flavor.monthly_price
@@ -110,6 +65,15 @@ def landing_page(request):
 
     context = {"form": form, "flavors": flavors}
     return render(request, "landing_page/landing.html", context)
+
+@login_required
+def sync_subscription_plans_view(request):  # Renamed to avoid conflict
+    if not request.user.is_superuser:
+        messages.error(request, "You do not have permission to access this page.")
+        return redirect('core:customer_dashboard') if request.user.is_staff else redirect('core:landing_page')
+    
+    success, plans = sync_subscription_plans(request)  # Call from utils.py
+    return redirect('core:subscription_plan_list')
 
 def user_instances(request):
     tenant_id = request.session.get('project_id', None)
@@ -161,7 +125,51 @@ def billing_dashboard(request):
         'model_code': 'BillingDashboard',
     })
     return render(request, "dashboard/admin/admin_dashboard.html", context)
+class CustomerDetailView(LoginRequiredMixin, DetailView):
+    model = Customer
+    template_name = 'dashboard/admin/customer_detail_view.html'
+    context_object_name = 'customer'
 
+    def dispatch(self, request, *args, **kwargs):
+        if not request.user.is_superuser:
+            messages.error(request, "You do not have permission to access this page.")
+            return redirect('core:customer_dashboard') if request.user.is_staff else redirect('core:landing_page')
+        return super().dispatch(request, *args, **kwargs)
+
+    def get_object(self, queryset=None):
+        # Retrieve the customer by ID (admin access)
+        obj = get_object_or_404(Customer, id=self.kwargs['pk'])
+        return obj
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        # Get the latest active or pending subscription for Start Date and End Date
+        subscription = Subscription.objects.filter(customer=self.get_object()).order_by('-start_date').first()
+        context.update({
+            'model_code': 'CustomerDetailView',
+            'subscription': subscription,  # Pass subscription for Start Date and End Date
+        })
+        return context
+class AdminSubscriptionDetailView(LoginRequiredMixin, DetailView):
+    model = Subscription
+    template_name = 'dashboard/admin/subscription_detail.html'
+    context_object_name = 'subscription'
+
+    def dispatch(self, request, *args, **kwargs):
+        if not request.user.is_superuser:
+            messages.error(request, "You do not have permission to access this page.")
+            return redirect('core:customer_dashboard') if request.user.is_staff else redirect('core:landing_page')
+        return super().dispatch(request, *args, **kwargs)
+
+    def get_object(self, queryset=None):
+        # Retrieve the subscription by ID without restricting to the current user (admin access)
+        obj = get_object_or_404(Subscription, id=self.kwargs['pk'])
+        return obj
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['model_code'] = 'AdminSubscriptionDetail'
+        return context
 class CustomerDashboardView(LoginRequiredMixin, VerificationRequiredMixin, View):
     template_name = 'dashboard/customer/customer_dashboard.html'
 
@@ -174,7 +182,31 @@ class CustomerDashboardView(LoginRequiredMixin, VerificationRequiredMixin, View)
             total_invoices = Invoice.objects.filter(customer=customer).count()
             total_active_subscriptions = Subscription.objects.filter(customer=customer, status='active').count()
             recent_invoices = Invoice.objects.filter(customer=customer).order_by('-issue_date')[:5]
-            pending_subscriptions = Subscription.objects.filter(customer=customer, status='pending')
+            # Order pending subscriptions by start_date in descending order (newest first)
+            pending_subscriptions = Subscription.objects.filter(customer=customer, status='pending').order_by('-start_date')
+
+            # Compute prices with VAT for pending subscriptions
+            VAT_RATE = Decimal('0.15')  # 15% VAT
+            pending_subscription_data = []
+            for subscription in pending_subscriptions:
+                base_price = subscription.plan.get_price_for_billing_cycle(subscription.billing_cycle)
+                vat_amount = base_price * VAT_RATE
+                total_price = base_price + vat_amount
+                pending_subscription_data.append({
+                    'subscription': subscription,
+                    'base_price': base_price,
+                    'total_price': total_price
+                })
+
+            # Paginate the pending_subscription_data
+            paginator = Paginator(pending_subscription_data, 5) 
+            page = request.GET.get('page')
+            try:
+                pending_subscription_data_paginated = paginator.page(page)
+            except PageNotAnInteger:
+                pending_subscription_data_paginated = paginator.page(1)
+            except EmptyPage:
+                pending_subscription_data_paginated = paginator.page(paginator.num_pages)
 
             cart = Cart.objects.filter(user=request.user).first()
             total = vat = grand_total = None
@@ -187,7 +219,8 @@ class CustomerDashboardView(LoginRequiredMixin, VerificationRequiredMixin, View)
                 'total_invoices': total_invoices,
                 'total_active_subscriptions': total_active_subscriptions,
                 'recent_invoices': recent_invoices,
-                'pending_subscriptions': pending_subscriptions,
+                'pending_subscriptions': pending_subscription_data_paginated,  # Use paginated data
+                'pending_subscription_count': len(pending_subscription_data),  # Total pending subscriptions
                 'cart': cart,
                 'total': total,
                 'vat': vat,
@@ -199,98 +232,6 @@ class CustomerDashboardView(LoginRequiredMixin, VerificationRequiredMixin, View)
             messages.warning(request, "Please create a customer profile to view your dashboard.")
             return redirect('core:customer_profile_create')
 
-    def post(self, request):
-        try:
-            customer = Customer.objects.get(user=request.user)
-            cart = Cart.objects.filter(user=request.user).first()
-
-            if not cart or not cart.items.exists():
-                messages.error(request, "Your cart is empty.")
-                return redirect('core:customer_dashboard')
-
-            if not request.POST.get('terms'):
-                messages.error(request, "You must agree to the terms and conditions.")
-                return redirect('core:customer_dashboard')
-
-            if not customer.is_verified:
-                messages.error(request, "Please verify your email before confirming order.")
-                return redirect('core:customer_dashboard')
-
-            customer.terms_and_condition = True
-            customer.save()
-
-            created_subscriptions = []
-            invoices = []
-            days_map = {
-                'monthly': 30,
-                'quarterly': 90,
-                'semi-annual': 180,
-                'yearly': 365
-            }
-            tax_rate = Decimal('0.15')
-
-            try:
-                with transaction.atomic():
-                    for item in cart.items.all():
-                        days = days_map.get(item.billing_cycle, 30)
-                        subscription = Subscription.objects.create(
-                        customer=customer,
-                        plan=item.plan,
-                        billing_cycle=item.billing_cycle,
-                        status='pending',
-                        start_date=timezone.now(),
-                        end_date=timezone.now() + timedelta(days=days)
-                    )
-
-
-                        created_subscriptions.append(subscription)
-                        amount = item.price
-                        tax = amount * tax_rate
-                        total = amount + tax
-                        invoice = Invoice.objects.create(
-                            customer=customer,
-                            subscription=subscription,
-                            amount=amount,
-                            due_date=timezone.now() + timedelta(days=30),
-                            issue_date=timezone.now(),
-                            status='pending',
-                            tax=tax,
-                            total=total,
-                            subtotal_currency='ETB',
-                            tax_currency='ETB',
-                            total_currency='ETB',
-                        )
-                        invoices.append(invoice)
-                    cart.delete()
-                    # Clear checkout_cart from session
-                    if 'checkout_cart' in request.session:
-                        del request.session['checkout_cart']
-            except Exception as e:
-                messages.error(request, f"Error processing order: {str(e)}")
-                return redirect('core:customer_dashboard')
-
-            if created_subscriptions:
-                subject = "New Invoices Generated"
-                message = render_to_string('emails/invoice_email.html', {
-                    'user': request.user,
-                    'invoices': invoices,
-                    'subscriptions': created_subscriptions,
-                    'invoice_url': request.build_absolute_uri(reverse('core:customer_invoices')),
-                })
-                send_mail(
-                    subject,
-                    message,
-                    settings.DEFAULT_FROM_EMAIL,
-                    [customer.user.email],
-                    html_message=message,
-                    fail_silently=False,
-                )
-
-            messages.success(request, f"Order placed successfully! {len(created_subscriptions)} subscription(s) created.")
-            return redirect('core:customer_invoices')
-        except Customer.DoesNotExist:
-            messages.warning(request, "Please create a customer profile to view your dashboard.")
-            return redirect('core:customer_profile_create')
 
 class CustomerSubscriptionsView(LoginRequiredMixin, VerificationRequiredMixin, View):
     template_name = 'dashboard/customer/customer_subscriptions.html'
@@ -312,6 +253,16 @@ class CustomerSubscriptionsView(LoginRequiredMixin, VerificationRequiredMixin, V
                     'base_price': base_price,
                     'total_price': total_price  # Include total price with VAT
                 })
+
+            # Paginate the subscription_data
+            paginator = Paginator(subscription_data, 5) 
+            page = request.GET.get('page')
+            try:
+                subscription_data_paginated = paginator.page(page)
+            except PageNotAnInteger:
+                subscription_data_paginated = paginator.page(1)
+            except EmptyPage:
+                subscription_data_paginated = paginator.page(paginator.num_pages)
 
             # Handle pending subscription from session (for guest users who logged in)
             pending_subscription = None
@@ -340,7 +291,8 @@ class CustomerSubscriptionsView(LoginRequiredMixin, VerificationRequiredMixin, V
                     del request.session['pending_subscription']
 
             context = {
-                'subscriptions': subscription_data,  # Pass subscription_data with base_price and total_price
+                'subscriptions': subscription_data_paginated,
+                'subscription_count': len(subscription_data),  # Total subscriptions
                 'pending_subscription': pending_subscription,
                 'customer': customer,
                 'model_code': 'CustomerSubscriptions',
@@ -431,8 +383,20 @@ class CustomerInvoicesView(LoginRequiredMixin, VerificationRequiredMixin, View):
         try:
             customer = Customer.objects.get(user=request.user)
             invoices = Invoice.objects.filter(customer=customer).order_by('-issue_date')
+
+            # Paginate the invoices
+            paginator = Paginator(invoices, 5)  
+            page = request.GET.get('page')
+            try:
+                invoices_paginated = paginator.page(page)
+            except PageNotAnInteger:
+                invoices_paginated = paginator.page(1)
+            except EmptyPage:
+                invoices_paginated = paginator.page(paginator.num_pages)
+
             context = {
-                'invoices': invoices,
+                'invoices': invoices_paginated,
+                'invoice_count': invoices.count(),  # Total invoices
                 'model_code': 'CustomerInvoices',
             }
             return render(request, self.template_name, context)
@@ -901,8 +865,20 @@ def customer_list(request):
             'subscription': subscription
         })
 
+    # Paginate the customer_data
+    paginator = Paginator(customer_data, 5) 
+    
+    page = request.GET.get('page')
+    try:
+        customer_data_paginated = paginator.page(page)
+    except PageNotAnInteger:
+        customer_data_paginated = paginator.page(1)
+    except EmptyPage:
+        customer_data_paginated = paginator.page(paginator.num_pages)
+
     return render(request, 'dashboard/admin/customer_list.html', {
-        'customer_data': customer_data,
+        'customer_data': customer_data_paginated,
+        'customer_count': len(customer_data),  # Total customers for display
         'model_code': 'Customer'
     })
 @login_required
@@ -912,19 +888,16 @@ def customer_detail(request, customer_id):
         return redirect('core:customer_dashboard') if request.user.is_staff else redirect('core:landing_page')
 
     customer = get_object_or_404(Customer, id=customer_id)
-    subscriptions = customer.subscription_set.select_related('plan').order_by('-start_date')
-    invoices = customer.invoices.order_by('-issue_date')
-    payments = Payment.objects.filter(invoice__customer=customer).order_by('-payment_date')
-    # Fetch orders for the customer (via user)
-    orders = Orders.objects.filter(user=customer.user).order_by('-created_at') if customer.user else []
+    # Fetch the latest subscription, prioritizing active or pending, ordered by creation date if start_date is null
+    subscription = Subscription.objects.filter(customer=customer).order_by('-start_date', '-created_at').first()
+
+    if not subscription:
+        messages.info(request, "No subscriptions found for this customer.")
 
     context = {
         'customer': customer,
-        'subscriptions': subscriptions,
-        'invoices': invoices,
-        'payments': payments,
-        'orders': orders,
-        'model_code': 'CustomerDetail'
+        'subscription': subscription,
+        'model_code': 'CustomerDetail',
     }
     return render(request, 'dashboard/admin/customer_detail.html', context)
 @login_required
@@ -934,7 +907,7 @@ def invoice_list(request):
         return redirect('core:customer_dashboard') if request.user.is_staff else redirect('core:landing_page')
 
     invoices = Invoice.objects.all().order_by('-issue_date')
-    paginator = Paginator(invoices, 10)  # 10 invoices per page
+    paginator = Paginator(invoices, 5) 
     page = request.GET.get('page')
     try:
         invoices_paginated = paginator.page(page)
@@ -955,8 +928,24 @@ def subscription_plan_list(request):
         return redirect('core:customer_dashboard') if request.user.is_staff else redirect('core:landing_page')
 
     plans = SubscriptionPlan.objects.all()
+    plan_count = plans.count()
+
+    # Paginate the plans
+    paginator = Paginator(plans, 5)  
+    page = request.GET.get('page')
+    try:
+        plans_paginated = paginator.page(page)
+    except PageNotAnInteger:
+        plans_paginated = paginator.page(1)
+    except EmptyPage:
+        plans_paginated = paginator.page(paginator.num_pages)
+
+    if plan_count == 0:
+        messages.info(request, "No subscription plans found. Try syncing with OpenStack.")
+
     return render(request, 'dashboard/admin/subscription_plan_list.html', {
-        'plans': plans,
+        'plans': plans_paginated,
+        'plan_count': plan_count,
         'model_code': 'SubscriptionPlan'
     })
 
@@ -969,13 +958,23 @@ def subscription_list(request):
     subscriptions = Subscription.objects.select_related('customer__user', 'plan').all().order_by('-start_date')
     subscription_count = subscriptions.count()
 
+    # Paginate the subscriptions
+    paginator = Paginator(subscriptions, 5)  
+    page = request.GET.get('page')
+    try:
+        subscriptions_paginated = paginator.page(page)
+    except PageNotAnInteger:
+        subscriptions_paginated = paginator.page(1)
+    except EmptyPage:
+        subscriptions_paginated = paginator.page(paginator.num_pages)
+
     if subscription_count == 0:
         messages.info(request, "No subscriptions found. Customers may not have confirmed any subscriptions yet.")
 
     context = {
-        'subscriptions': subscriptions,
-        'model_code': 'Subscription',
+        'subscriptions': subscriptions_paginated,
         'subscription_count': subscription_count,
+        'model_code': 'Subscription'
     }
     return render(request, 'dashboard/admin/subscription_list.html', context)
 

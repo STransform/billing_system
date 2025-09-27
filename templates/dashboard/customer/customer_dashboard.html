@@ -1,7 +1,10 @@
 {% extends 'dashboard/common/base.html' %}
+{% load static %}
+
 {% block title %}
 Customer Dashboard
 {% endblock %}
+
 {% block content %}
 <h1 class="text-2xl font-semibold text-gray-800 hidden md:block py-2">Customer Dashboard</h1>
 
@@ -113,47 +116,174 @@ Customer Dashboard
 
 <div class="bg-white p-6 rounded-lg shadow-md mt-6">
     <h2 class="text-xl font-semibold mb-4 text-gray-800">Pending Subscriptions</h2>
+    <p class="text-sm text-gray-600 mb-4">Total Pending Subscriptions: {{ pending_subscription_count }}</p>
     <div class="overflow-x-auto">
         {% if pending_subscriptions %}
-            <table class="min-w-full">
-                <thead>
-                    <tr class="border-b border-gray-200">
-                        <th class="text-left py-3 px-4 font-semibold text-sm text-gray-600">Plan Name</th>
-                        <th class="text-left py-3 px-4 font-semibold text-sm text-gray-600">Billing Cycle</th>
-                        <th class="text-left py-3 px-4 font-semibold text-sm text-gray-600">Price</th>
-                        <th class="text-left py-3 px-4 font-semibold text-sm text-gray-600">vCPUs</th>
-                        <th class="text-left py-3 px-4 font-semibold text-sm text-gray-600">RAM (GB)</th>
-                        <th class="text-left py-3 px-4 font-semibold text-sm text-gray-600">OS Storage (GB)</th>
-                        <th class="text-left py-3 px-4 font-semibold text-sm text-gray-600">Data Storage (GB)</th>
-                        <th class="text-left py-3 px-4 font-semibold text-sm text-gray-600">Actions</th>
+            <table class="min-w-full divide-y divide-gray-200">
+                <thead class="bg-gray-50">
+                    <tr>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Plan Name</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Billing Cycle</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Total Price (incl. 15% VAT)</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
                     </tr>
                 </thead>
-                <tbody>
-                    {% for subscription in pending_subscriptions %}
-                        <tr class="border-b border-gray-200 hover:bg-gray-50">
-                            <td class="py-3 px-4 text-gray-800">{{ subscription.plan.name }}</td>
-                            <td class="py-3 px-4 text-gray-800">{{ subscription.billing_cycle|capfirst }}</td>
-                            <td class="py-3 px-4 text-gray-800">{{ subscription.plan.price_currency }} {{ subscription.plan.get_price_for_billing_cycle|default:subscription.plan.monthly_price }}</td>
-                            <td class="py-3 px-4 text-gray-800">{{ subscription.plan.vcpu }}</td>
-                            <td class="py-3 px-4 text-gray-800">{{ subscription.plan.ram }}</td>
-                            <td class="py-3 px-4 text-gray-800">{{ subscription.plan.os_storage }}</td>
-                            <td class="py-3 px-4 text-gray-800">{{ subscription.plan.data_storage }}</td>
-                            <td class="py-3 px-4">
-                                <a href="{% url 'accounts:confirm_subscription' subscription.id %}" class="text-blue-600 hover:underline">Confirm</a>
+                <tbody class="bg-white divide-y divide-gray-200">
+                    {% for sub_data in pending_subscriptions %}
+                        <tr class="table-row-hover hover:bg-gray-50">
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-800 font-medium">{{ sub_data.subscription.plan.name|default:"N/A" }}</td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-800 font-medium">{{ sub_data.subscription.billing_cycle|capfirst|default:"N/A" }}</td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-800 font-medium">{{ sub_data.subscription.plan.price_currency|default:"N/A" }} {{ sub_data.total_price|floatformat:2 }}</td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm flex space-x-3">
+                                <button type="button" class="inline-flex items-center px-3 py-1 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-200"
+                                    data-sub-id="{{ sub_data.subscription.id|escape }}"
+                                    data-plan-name="{{ sub_data.subscription.plan.name|escape }}"
+                                    data-billing-cycle="{{ sub_data.subscription.billing_cycle|capfirst|escape }}"
+                                    data-total-price="{{ sub_data.subscription.plan.price_currency|escape }} {{ sub_data.total_price|floatformat:2|escape }}"
+                                    data-vcpu="{{ sub_data.subscription.plan.vcpu|escape }}"
+                                    data-ram="{{ sub_data.subscription.plan.ram|escape }}"
+                                    data-os-storage="{{ sub_data.subscription.plan.os_storage|escape }}"
+                                    data-data-storage="{{ sub_data.subscription.plan.data_storage|escape }}"
+                                    data-status="{{ sub_data.subscription.status|capfirst|escape }}"
+                                    data-start-date="{{ sub_data.subscription.start_date|date:'Y-m-d'|escape }}"
+                                    data-end-date="{{ sub_data.subscription.end_date|date:'Y-m-d'|escape }}"
+                                    onclick="openSubscriptionModal(this)">Details</button>
+                                <form method="post" action="{% url 'core:customer_subscriptions' %}" class="inline">
+                                    {% csrf_token %}
+                                    <input type="hidden" name="action" value="confirm">
+                                    <input type="hidden" name="subscription_id" value="{{ sub_data.subscription.id }}">
+                                    <button type="submit" class="inline-flex items-center px-3 py-1 bg-green-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-200">Confirm</button>
+                                </form>
                                 <form method="post" action="{% url 'core:customer_subscriptions' %}" class="inline">
                                     {% csrf_token %}
                                     <input type="hidden" name="action" value="cancel">
-                                    <input type="hidden" name="subscription_id" value="{{ subscription.id }}">
-                                    <button type="submit" class="text-red-600 hover:underline ml-2">Cancel</button>
+                                    <input type="hidden" name="subscription_id" value="{{ sub_data.subscription.id }}">
+                                    <button type="submit" class="inline-flex items-center px-3 py-1 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors duration-200">Cancel</button>
                                 </form>
+                            </td>
+                        </tr>
+                    {% empty %}
+                        <tr>
+                            <td colspan="4" class="px-6 py-4 text-center text-sm text-gray-500 font-medium">
+                                No pending subscriptions.
                             </td>
                         </tr>
                     {% endfor %}
                 </tbody>
             </table>
+            {% if pending_subscriptions.has_other_pages %}
+                <div class="mt-6">
+                    <nav class="flex justify-center">
+                        <ul class="inline-flex items-center -space-x-px text-sm">
+                            {% if pending_subscriptions.has_previous %}
+                                <li>
+                                    <a href="?page={{ pending_subscriptions.previous_page_number }}" class="px-3 py-2 ml-0 leading-tight text-gray-500 bg-white border border-gray-300 rounded-l-lg hover:bg-gray-100 hover:text-gray-700 transition duration-200">Previous</a>
+                                </li>
+                            {% endif %}
+                            {% for num in pending_subscriptions.paginator.page_range %}
+                                <li>
+                                    <a href="?page={{ num }}" class="px-3 py-2 {% if pending_subscriptions.number == num %}text-white bg-blue-600 border-blue-600{% else %}text-gray-500 bg-white border-gray-300 hover:bg-gray-100 hover:text-gray-700{% endif %} border transition duration-200">{{ num }}</a>
+                                </li>
+                            {% endfor %}
+                            {% if pending_subscriptions.has_next %}
+                                <li>
+                                    <a href="?page={{ pending_subscriptions.next_page_number }}" class="px-3 py-2 leading-tight text-gray-500 bg-white border border-gray-300 rounded-r-lg hover:bg-gray-100 hover:text-gray-700 transition duration-200">Next</a>
+                                </li>
+                            {% endif %}
+                        </ul>
+                    </nav>
+                </div>
+            {% endif %}
         {% else %}
-            <p class="text-gray-600">No pending subscriptions.</p>
+            <p class="text-gray-600 text-center py-4 font-medium">No pending subscriptions.</p>
         {% endif %}
     </div>
 </div>
+
+<!-- Modal Structure -->
+<div id="subscriptionModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 flex items-center justify-center hidden z-50">
+    <div class="bg-white p-6 rounded-lg shadow-md max-w-lg w-full">
+        <h2 class="text-xl font-semibold mb-4 text-gray-800">Subscription Details</h2>
+        <div id="modalContent" class="space-y-2">
+            <p><strong>Plan Name:</strong> <span id="modalPlanName"></span></p>
+            <p><strong>Billing Cycle:</strong> <span id="modalBillingCycle"></span></p>
+            <p><strong>Total Price (incl. 15% VAT):</strong> <span id="modalTotalPrice"></span></p>
+            <p><strong>vCPUs:</strong> <span id="modalVCPUs"></span></p>
+            <p><strong>RAM (GB):</strong> <span id="modalRAM"></span></p>
+            <p><strong>OS Storage (GB):</strong> <span id="modalOSStorage"></span></p>
+            <p><strong>Data Storage (GB):</strong> <span id="modalDataStorage"></span></p>
+            <p><strong>Status:</strong> <span id="modalStatus"></span></p>
+            <p><strong>Start Date:</strong> <span id="modalStartDate"></span></p>
+            <p><strong>End Date:</strong> <span id="modalEndDate"></span></p>
+        </div>
+        <div class="mt-6 flex justify-end">
+            <button type="button" onclick="closeSubscriptionModal()" class="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700">Close</button>
+        </div>
+    </div>
+</div>
+
+<!-- JavaScript for Modal -->
+<script>
+    // Ensure the script runs after the DOM is fully loaded
+    document.addEventListener('DOMContentLoaded', function () {
+        // Debugging: Log to confirm script is loaded
+        console.log('Modal script loaded');
+
+        // Open modal with subscription details
+        window.openSubscriptionModal = function (button) {
+            var id = button.dataset.subId;
+            var planName = button.dataset.planName;
+            var billingCycle = button.dataset.billingCycle;
+            var totalPrice = button.dataset.totalPrice;
+            var vcpus = button.dataset.vcpu;
+            var ram = button.dataset.ram;
+            var osStorage = button.dataset.osStorage;
+            var dataStorage = button.dataset.dataStorage;
+            var status = button.dataset.status;
+            var startDate = button.dataset.startDate;
+            var endDate = button.dataset.endDate;
+
+            console.log('Opening modal with:', { id, planName, billingCycle, totalPrice, vcpus, ram, osStorage, dataStorage, status, startDate, endDate });
+            try {
+                document.getElementById('modalPlanName').textContent = planName || 'N/A';
+                document.getElementById('modalBillingCycle').textContent = billingCycle || 'N/A';
+                document.getElementById('modalTotalPrice').textContent = totalPrice || 'N/A';
+                document.getElementById('modalVCPUs').textContent = vcpus || 'N/A';
+                document.getElementById('modalRAM').textContent = ram || 'N/A';
+                document.getElementById('modalOSStorage').textContent = osStorage || 'N/A';
+                document.getElementById('modalDataStorage').textContent = dataStorage || 'N/A';
+                document.getElementById('modalStatus').textContent = status || 'N/A';
+                document.getElementById('modalStartDate').textContent = startDate || 'N/A';
+                document.getElementById('modalEndDate').textContent = endDate || 'N/A';
+                var modal = document.getElementById('subscriptionModal');
+                if (modal) {
+                    modal.classList.remove('hidden');
+                } else {
+                    console.error('Modal element not found');
+                    alert('Failed to open subscription details: Modal element not found.');
+                }
+            } catch (error) {
+                console.error('Error opening modal:', error);
+                alert('Failed to open subscription details: ' + error.message);
+            }
+        };
+
+        // Close modal
+        window.closeSubscriptionModal = function () {
+            console.log('Closing modal');
+            try {
+                var modal = document.getElementById('subscriptionModal');
+                if (modal) {
+                    modal.classList.add('hidden');
+                } else {
+                    console.error('Modal element not found');
+                    alert('Failed to close modal: Modal element not found.');
+                }
+            } catch (error) {
+                console.error('Error closing modal:', error);
+                alert('Failed to close modal: ' + error.message);
+            }
+        };
+    });
+</script>
 {% endblock %}

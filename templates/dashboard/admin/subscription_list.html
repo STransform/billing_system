@@ -6,13 +6,13 @@ Subscriptions
 {% endblock %}
 
 {% block content %}
-<div class="container mx-auto">
-    <h1 class="text-2xl font-semibold text-gray-800 hidden md:block py-4">Subscription List</h1>
+<div class="container mx-auto px-4 py-8">
+    <h1 class="text-3xl font-bold text-gray-900 mb-8 md:block hidden">Subscription List</h1>
 
-    <div class="bg-white p-6 rounded-lg shadow-md">
-        <h2 class="text-xl font-semibold mb-4 text-gray-800">All Subscriptions</h2>
+    <div class="bg-white rounded-xl shadow-lg p-8 max-w-4xl mx-auto">
+        <!-- <h2 class="text-2xl font-semibold text-gray-900 mb-6">All Subscriptions</h2> -->
 
-        <p class="text-sm text-gray-600 mb-4">Total Subscriptions: {{ subscription_count }}</p>
+        <p class="text-sm text-gray-600 mb-6">Total Subscriptions: {{ subscription_count }}</p>
 
         <div class="overflow-x-auto">
             {% if subscriptions %}
@@ -22,54 +22,53 @@ Subscriptions
                             <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Customer Email</th>
                             <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Company</th>
                             <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Plan Name</th>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">vCPU</th>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">RAM (GB)</th>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">OS Storage (GB)</th>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Data Storage (GB)</th>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Hourly Price</th>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Monthly Price</th>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Flavor ID</th>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Start Date</th>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">End Date</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
                         </tr>
                     </thead>
                     <tbody class="bg-white divide-y divide-gray-200">
                         {% for subscription in subscriptions %}
-                            <tr class="table-row-hover">
-                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-800">{{ subscription.customer.user.email|default:"N/A" }}</td>
-                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-800">{{ subscription.customer.company|default:"N/A" }}</td>
-                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-800">{{ subscription.plan.name|default:"N/A" }}</td>
-                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-800">{{ subscription.plan.vcpu|default:"N/A" }}</td>
-                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-800">{{ subscription.plan.ram|default:"N/A" }}</td>
-                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-800">{{ subscription.plan.os_storage|default:"N/A" }}</td>
-                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-800">{{ subscription.plan.data_storage|default:"N/A" }}</td>
-                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-800">{{ subscription.plan.price_currency|default:"N/A" }} {{ subscription.plan.hourly_price|default:"N/A" }}</td>
-                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-800">{{ subscription.plan.monthly_price|default:"N/A" }}</td>
-                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-800">{{ subscription.plan.flavor_id|default:"N/A" }}</td>
-                                <td class="px-6 py-4 whitespace-nowrap">
-                                    <span class="px-2 py-1 text-xs font-semibold rounded-full
-                                        {% if subscription.status == 'active' %} bg-green-100 text-green-700
-                                        {% elif subscription.status == 'pending' %} bg-yellow-100 text-yellow-700
-                                        {% else %} bg-red-100 text-red-700
-                                        {% endif %}">
-                                        {{ subscription.status|capfirst }}
-                                    </span>
+                            <tr class="table-row-hover hover:bg-gray-50">
+                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-800 font-medium">{{ subscription.customer.user.email|default:"N/A" }}</td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-800 font-medium">{{ subscription.customer.company|default:"N/A" }}</td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-800 font-medium">{{ subscription.plan.name|default:"N/A" }}</td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm">
+                                    <a href="{% url 'core:admin_subscription_detail' subscription.id %}" class="inline-flex items-center px-3 py-1 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-200">Details</a>
                                 </td>
-                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-800">{{ subscription.start_date|date:"Y-m-d"|default:"N/A" }}</td>
-                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-800">{{ subscription.end_date|date:"Y-m-d"|default:"N/A" }}</td>
                             </tr>
                         {% empty %}
                             <tr>
-                                <td colspan="13" class="px-6 py-4 text-center text-sm text-gray-500">
+                                <td colspan="4" class="px-6 py-4 text-center text-sm text-gray-500 font-medium">
                                     No subscriptions found. Please ensure customers have confirmed subscriptions or contact support.
                                 </td>
                             </tr>
                         {% endfor %}
                     </tbody>
                 </table>
+                {% if subscriptions.has_other_pages %}
+                    <div class="mt-6">
+                        <nav class="flex justify-center">
+                            <ul class="inline-flex items-center -space-x-px text-sm">
+                                {% if subscriptions.has_previous %}
+                                    <li>
+                                        <a href="?page={{ subscriptions.previous_page_number }}" class="px-3 py-2 ml-0 leading-tight text-gray-500 bg-white border border-gray-300 rounded-l-lg hover:bg-gray-100 hover:text-gray-700 transition duration-200">Previous</a>
+                                    </li>
+                                {% endif %}
+                                {% for num in subscriptions.paginator.page_range %}
+                                    <li>
+                                        <a href="?page={{ num }}" class="px-3 py-2 {% if subscriptions.number == num %}text-white bg-blue-600 border-blue-600{% else %}text-gray-500 bg-white border-gray-300 hover:bg-gray-100 hover:text-gray-700{% endif %} border transition duration-200">{{ num }}</a>
+                                    </li>
+                                {% endfor %}
+                                {% if subscriptions.has_next %}
+                                    <li>
+                                        <a href="?page={{ subscriptions.next_page_number }}" class="px-3 py-2 leading-tight text-gray-500 bg-white border border-gray-300 rounded-r-lg hover:bg-gray-100 hover:text-gray-700 transition duration-200">Next</a>
+                                    </li>
+                                {% endif %}
+                            </ul>
+                        </nav>
+                    </div>
+                {% endif %}
             {% else %}
-                <p class="text-gray-600">No subscriptions found.</p>
+                <p class="text-gray-600 text-center py-4 font-medium">No subscriptions found.</p>
             {% endif %}
         </div>
     </div>

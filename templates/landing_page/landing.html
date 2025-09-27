@@ -70,6 +70,20 @@
 <section id="pricing" class="py-20 bg-gray-50">
   <div class="max-w-6xl mx-auto px-6 text-center">
     <h2 class="text-3xl font-bold mb-12 text-gray-900">Simple Pricing</h2>
+    {% if messages %}
+      <div class="mb-6">
+        {% for message in messages %}
+          <div class="mb-2 p-3 rounded-lg text-sm font-medium
+              {% if message.tags == 'success' %} bg-green-100 text-green-700
+              {% elif message.tags == 'error' %} bg-red-100 text-red-700
+              {% elif message.tags == 'info' %} bg-blue-100 text-blue-700
+              {% else %} bg-gray-200 text-gray-700
+              {% endif %}">
+              {{ message }}
+          </div>
+        {% endfor %}
+      </div>
+    {% endif %}
     <div class="grid md:grid-cols-3 gap-8">
       {% for f in flavors %}
       <div class="bg-white rounded-xl shadow p-8 hover:shadow-xl transition border-2 border-red-600">
@@ -82,12 +96,13 @@
                 data-semi-annual="{{ f.semi_annual_price_display|floatformat:2 }}"
                 data-yearly="{{ f.yearly_price_display|floatformat:2 }}">
             {{ f.monthly_price_display|floatformat:2 }}
-          </span> Birr<span class="text-lg">/<span class="cycle-display">mo</span></span>
+          </span> {{ f.price_currency }}<span class="text-lg">/<span class="cycle-display">mo</span></span>
         </p>
         <ul class="space-y-3 text-gray-600 mb-6">
-          <li><i class="fas fa-check text-red-600"></i> {{ f.vcpu }} vCPU, {{ f.ram }} GB RAM</li>
-          <li><i class="fas fa-check text-red-600"></i> {{ f.os_storage }} GB Storage</li>
-          <li><i class="fas fa-check text-red-600"></i> {{ f.data_storage }} GB Storage</li>
+          <li><i class="fas fa-check text-red-600"></i> {{ f.vcpu }} vCPU</li>
+          <li><i class="fas fa-check text-red-600"></i> {{ f.ram }} GB RAM</li>
+          <li><i class="fas fa-check text-red-600"></i> {{ f.os_storage }} GB OS Storage</li>
+          <li><i class="fas fa-check text-red-600"></i> {{ f.data_storage }} GB Data Storage</li>
           <li><i class="fas fa-check text-red-600"></i> Unlimited bandwidth</li>
         </ul>
         <form method="post" action="{% url 'core:add_to_cart' plan_id=f.id %}">
@@ -103,6 +118,8 @@
           </button>
         </form>
       </div>
+      {% empty %}
+        <p class="text-gray-600">No subscription plans available at the moment.</p>
       {% endfor %}
     </div>
   </div>

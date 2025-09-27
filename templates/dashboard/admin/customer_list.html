@@ -2,15 +2,17 @@
 {% load static %}
 
 {% block title %}
-Admin Customers
+Customers
 {% endblock %}
 
 {% block content %}
-<div class="container mx-auto">
-    <h1 class="text-2xl font-semibold text-gray-800 hidden md:block py-4">Customer List</h1>
+<div class="container mx-auto px-4 py-8">
+    <h1 class="text-3xl font-bold text-gray-900 mb-8 md:block hidden">Customer List</h1>
 
-    <div class="bg-white p-6 rounded-lg shadow-md">
-        <h2 class="text-xl font-semibold mb-4 text-gray-800">All Customers</h2>
+    <div class="bg-white rounded-xl shadow-lg p-8 max-w-4xl mx-auto">
+        <!-- <h2 class="text-2xl font-semibold text-gray-900 mb-6">All Customers</h2> -->
+
+        <p class="text-sm text-gray-600 mb-6">Total Customers: {{ customer_count }}</p>
 
         <div class="overflow-x-auto">
             {% if customer_data %}
@@ -20,58 +22,55 @@ Admin Customers
                             <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
                             <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Company</th>
                             <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Phone</th>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">City</th>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">State</th>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Country</th>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Payment Method</th>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Created At</th>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Start Date</th>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">End Date</th>
                             <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
                         </tr>
                     </thead>
                     <tbody class="bg-white divide-y divide-gray-200">
                         {% for data in customer_data %}
-                            {% with customer=data.customer subscription=data.subscription %}
-                                <tr class="table-row-hover">
-                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-800">{{ customer.name|default:"N/A" }}</td>
-                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-800">{{ customer.company|default:"N/A" }}</td>
-                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-800">{{ customer.phone|default:"N/A" }}</td>
-                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-800">{{ customer.city|default:"N/A" }}</td>
-                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-800">{{ customer.state|default:"N/A" }}</td>
-                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-800">{{ customer.country|default:"N/A" }}</td>
-                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-800">{{ customer.preferred_payment_method|default:"N/A" }}</td>
-                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-800">{{ customer.created_at|date:"Y-m-d H:i"|default:"N/A" }}</td>
-                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-800">
-                                        {% if subscription %}
-                                            {{ subscription.start_date|date:"Y-m-d H:i"|default:"N/A" }}
-                                        {% else %}
-                                            N/A
-                                        {% endif %}
-                                    </td>
-                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-800">
-                                        {% if subscription %}
-                                            {{ subscription.end_date|date:"Y-m-d H:i"|default:"N/A" }}
-                                        {% else %}
-                                            N/A
-                                        {% endif %}
-                                    </td>
+                            {% with customer=data.customer %}
+                                <tr class="table-row-hover hover:bg-gray-50">
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-800 font-medium">{{ customer.name|default:"N/A" }}</td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-800 font-medium">{{ customer.company|default:"N/A" }}</td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-800 font-medium">{{ customer.phone|default:"N/A" }}</td>
                                     <td class="px-6 py-4 whitespace-nowrap text-sm">
-                                        <a href="{% url 'core:customer_detail' customer.id %}" class="text-blue-600 hover:underline">Details</a>
+                                        <a href="{% url 'core:customer_detail' customer.id %}" class="inline-flex items-center px-3 py-1 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-200">Details</a>
                                     </td>
                                 </tr>
                             {% endwith %}
                         {% empty %}
                             <tr>
-                                <td colspan="11" class="px-6 py-4 text-center text-sm text-gray-500">
+                                <td colspan="4" class="px-6 py-4 text-center text-sm text-gray-500">
                                     No customers found.
                                 </td>
                             </tr>
                         {% endfor %}
                     </tbody>
                 </table>
+                {% if customer_data.has_other_pages %}
+                    <div class="mt-6">
+                        <nav class="flex justify-center">
+                            <ul class="inline-flex items-center -space-x-px text-sm">
+                                {% if customer_data.has_previous %}
+                                    <li>
+                                        <a href="?page={{ customer_data.previous_page_number }}" class="px-3 py-2 ml-0 leading-tight text-gray-500 bg-white border border-gray-300 rounded-l-lg hover:bg-gray-100 hover:text-gray-700 transition duration-200">Previous</a>
+                                    </li>
+                                {% endif %}
+                                {% for num in customer_data.paginator.page_range %}
+                                    <li>
+                                        <a href="?page={{ num }}" class="px-3 py-2 {% if customer_data.number == num %}text-white bg-blue-600 border-blue-600{% else %}text-gray-500 bg-white border-gray-300 hover:bg-gray-100 hover:text-gray-700{% endif %} border transition duration-200">{{ num }}</a>
+                                    </li>
+                                {% endfor %}
+                                {% if customer_data.has_next %}
+                                    <li>
+                                        <a href="?page={{ customer_data.next_page_number }}" class="px-3 py-2 leading-tight text-gray-500 bg-white border border-gray-300 rounded-r-lg hover:bg-gray-100 hover:text-gray-700 transition duration-200">Next</a>
+                                    </li>
+                                {% endif %}
+                            </ul>
+                        </nav>
+                    </div>
+                {% endif %}
             {% else %}
-                <p class="text-gray-600">No customers found.</p>
+                <p class="text-gray-600 text-center py-4">No customers found.</p>
             {% endif %}
         </div>
     </div>

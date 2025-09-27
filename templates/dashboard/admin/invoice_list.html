@@ -6,11 +6,13 @@ Admin Invoices
 {% endblock %}
 
 {% block content %}
-<div class="container mx-auto">
-    <h1 class="text-2xl font-semibold text-gray-800 hidden md:block py-4">Invoice List</h1>
+<div class="container mx-auto px-4 py-8">
+    <h1 class="text-3xl font-bold text-gray-900 mb-8 md:block hidden">Invoice List</h1>
 
-    <div class="bg-white p-6 rounded-lg shadow-md">
-        <h2 class="text-xl font-semibold mb-4 text-gray-800">All Invoices</h2>
+    <div class="bg-white rounded-xl shadow-lg p-8 max-w-4xl mx-auto">
+        <!-- <h2 class="text-2xl font-semibold text-gray-900 mb-6">All Invoices</h2> -->
+
+        <p class="text-sm text-gray-600 mb-6">Total Invoices: {{ invoices.paginator.count }}</p>
 
         <div class="overflow-x-auto">
             {% if invoices %}
@@ -21,21 +23,21 @@ Admin Invoices
                             <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Customer</th>
                             <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Amount</th>
                             <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Total</th>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Issue Date</th>
+                            <!-- <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Issue Date</th>
                             <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Due Date</th>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th> -->
                             <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
                         </tr>
                     </thead>
                     <tbody class="bg-white divide-y divide-gray-200">
                         {% for invoice in invoices %}
-                            <tr class="table-row-hover">
-                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-800">{{ invoice.invoice_number|default:"N/A" }}</td>
-                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-800">{{ invoice.customer.name|default:invoice.customer.user.email|default:"N/A" }}</td>
-                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-800">{{ invoice.amount|default:"N/A" }} {{ invoice.subtotal_currency }}</td>
-                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-800">{{ invoice.total|default:"N/A" }} {{ invoice.total_currency }}</td>
-                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-800">{{ invoice.issue_date|date:"Y-m-d H:i"|default:"N/A" }}</td>
-                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-800">{{ invoice.due_date|date:"Y-m-d H:i"|default:"N/A" }}</td>
+                            <tr class="table-row-hover hover:bg-gray-50">
+                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-800 font-medium">{{ invoice.invoice_number|default:"N/A" }}</td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-800 font-medium">{{ invoice.customer.name|default:invoice.customer.user.email|default:"N/A" }}</td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-800 font-medium">{{ invoice.amount|default:"N/A" }} {{ invoice.subtotal_currency }}</td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-800 font-medium">{{ invoice.total|default:"N/A" }} {{ invoice.total_currency }}</td>
+                                <!-- <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-800 font-medium">{{ invoice.issue_date|date:"Y-m-d H:i"|default:"N/A" }}</td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-800 font-medium">{{ invoice.due_date|date:"Y-m-d H:i"|default:"N/A" }}</td>
                                 <td class="px-6 py-4 whitespace-nowrap">
                                     <span class="px-2 py-1 text-xs font-semibold rounded-full
                                         {% if invoice.status == 'paid' %} bg-green-100 text-green-700
@@ -44,9 +46,9 @@ Admin Invoices
                                         {% endif %}">
                                         {{ invoice.status|capfirst }}
                                     </span>
-                                </td>
+                                </td> -->
                                 <td class="px-6 py-4 whitespace-nowrap text-sm">
-                                    <a href="{% url 'core:invoice_detail' invoice.id %}" class="text-blue-600 hover:underline">Details</a>
+                                    <a href="{% url 'core:invoice_detail' invoice.id %}" class="inline-flex items-center px-3 py-1 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-200">Details</a>
                                 </td>
                             </tr>
                         {% empty %}
@@ -82,7 +84,7 @@ Admin Invoices
                     </div>
                 {% endif %}
             {% else %}
-                <p class="text-gray-600">No invoices found.</p>
+                <p class="text-gray-600 text-center py-4 font-medium">No invoices found.</p>
             {% endif %}
         </div>
     </div>
