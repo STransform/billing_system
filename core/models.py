@@ -10,15 +10,15 @@ def generate_invoice_number():
     The sequential number increments daily, starting from 1.
     """
     today = timezone.now().date()
-    date_str = today.strftime('%m%d%Y') 
+    date_str = today.strftime('%m%d%Y')
     prefix = 'INV-'
     suffix = f'-{date_str}'
     
-    max_retries = 5
+    max_retries = 50  # retries to handle high concurrency
     for attempt in range(max_retries):
         try:
             with transaction.atomic():
-                #today to prevent concurrent updates
+                # Lock invoices for the current date to prevent concurrent updates
                 last_invoice = Invoice.objects.filter(
                     invoice_number__startswith=prefix,
                     invoice_number__endswith=suffix
@@ -34,14 +34,16 @@ def generate_invoice_number():
                 
                 invoice_number = f'{prefix}{seq_number}{suffix}'
                 
-                # Verify uniqueness before returning
+                # Double-check uniqueness
                 if not Invoice.objects.filter(invoice_number=invoice_number).exists():
                     return invoice_number
         except IntegrityError:
             if attempt == max_retries - 1:
-                raise ValueError("Unable to generate unique invoice number after retries.")
+                # Fallback to UUID-based invoice number to avoid failure
+                return f'INV-{uuid.uuid4().hex[:8].upper()}-{date_str}'
             continue  # Retry on IntegrityError
-    raise ValueError("Unable to generate unique invoice number after retries.")
+    # Fallback to UUID if retries fail
+    return f'INV-{uuid.uuid4().hex[:8].upper()}-{date_str}'
 
 class ContactMessage(models.Model):
     name = models.CharField(max_length=150)
@@ -66,7 +68,10 @@ class Invoice(models.Model):
     due_date = models.DateTimeField()
     status = models.CharField(
         max_length=20,
-        choices=[('pending', 'Pending'), ('paid', 'Paid'), ('overdue', 'Overdue')],
+        choices=[('pending', 'Pending'), 
+                ('confirmed', 'Confirmed'),
+                 ('paid', 'Paid'), 
+                 ('overdue', 'Overdue')],
         default='pending'
     )
     created_at = models.DateTimeField(auto_now_add=True)
@@ -331,7 +336,13 @@ class Subscription(models.Model):
     end_date = models.DateTimeField(null=True, blank=True)
     status = models.CharField(
         max_length=20,
-        choices=[('pending', 'Pending'), ('active', 'Active'), ('cancelled', 'Cancelled'), ('expired', 'Expired')],
+        choices=[
+            ('pending', 'Pending'),
+            ('confirmed', 'Confirmed'), 
+            ('active', 'Active'),
+            ('cancelled', 'Cancelled'),
+            ('expired', 'Expired')
+        ],
         default='pending'
     )
     created_at = models.DateTimeField(auto_now_add=True)

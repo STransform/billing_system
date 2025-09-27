@@ -147,18 +147,33 @@ Customer Dashboard
                                     data-status="{{ sub_data.subscription.status|capfirst|escape }}"
                                     data-start-date="{{ sub_data.subscription.start_date|date:'Y-m-d'|escape }}"
                                     data-end-date="{{ sub_data.subscription.end_date|date:'Y-m-d'|escape }}"
-                                    onclick="openSubscriptionModal(this)">Details</button>
+                                    onclick="openSubscriptionModal(this)">
+                                    <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12h.01M12 12h.01M9 12h.01M12 15h.01M12 9h.01M4 6h16M4 10h16M4 14h16M4 18h16"></path>
+                                    </svg>
+                                    Details
+                                </button>
                                 <form method="post" action="{% url 'core:customer_subscriptions' %}" class="inline">
                                     {% csrf_token %}
                                     <input type="hidden" name="action" value="confirm">
                                     <input type="hidden" name="subscription_id" value="{{ sub_data.subscription.id }}">
-                                    <button type="submit" class="inline-flex items-center px-3 py-1 bg-green-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-200">Confirm</button>
+                                    <button type="submit" class="inline-flex items-center px-3 py-1 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors duration-200">
+                                        <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                                        </svg>
+                                        Confirm
+                                    </button>
                                 </form>
                                 <form method="post" action="{% url 'core:customer_subscriptions' %}" class="inline">
                                     {% csrf_token %}
                                     <input type="hidden" name="action" value="cancel">
                                     <input type="hidden" name="subscription_id" value="{{ sub_data.subscription.id }}">
-                                    <button type="submit" class="inline-flex items-center px-3 py-1 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors duration-200">Cancel</button>
+                                    <button type="submit" class="inline-flex items-center px-3 py-1 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors duration-200">
+                                        <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                                        </svg>
+                                        Cancel
+                                    </button>
                                 </form>
                             </td>
                         </tr>
@@ -201,49 +216,125 @@ Customer Dashboard
 </div>
 
 <!-- Modal Structure -->
-<div id="subscriptionModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 flex items-center justify-center hidden z-50">
-    <div class="bg-white p-6 rounded-lg shadow-md max-w-lg w-full">
-        <h2 class="text-xl font-semibold mb-4 text-gray-800">Subscription Details</h2>
-        <div id="modalContent" class="space-y-2">
-            <p><strong>Plan Name:</strong> <span id="modalPlanName"></span></p>
-            <p><strong>Billing Cycle:</strong> <span id="modalBillingCycle"></span></p>
-            <p><strong>Total Price (incl. 15% VAT):</strong> <span id="modalTotalPrice"></span></p>
-            <p><strong>vCPUs:</strong> <span id="modalVCPUs"></span></p>
-            <p><strong>RAM (GB):</strong> <span id="modalRAM"></span></p>
-            <p><strong>OS Storage (GB):</strong> <span id="modalOSStorage"></span></p>
-            <p><strong>Data Storage (GB):</strong> <span id="modalDataStorage"></span></p>
-            <p><strong>Status:</strong> <span id="modalStatus"></span></p>
-            <p><strong>Start Date:</strong> <span id="modalStartDate"></span></p>
-            <p><strong>End Date:</strong> <span id="modalEndDate"></span></p>
+<div id="subscriptionModal" class="fixed inset-0 bg-gray-900 bg-opacity-60 flex items-center justify-center hidden z-50 transition-opacity duration-300">
+    <div class="bg-white rounded-xl shadow-2xl p-8 max-w-3xl w-full m-4 modal-content">
+        <h2 class="text-2xl font-semibold text-gray-900 mb-6">Subscription Details</h2>
+        <div id="modalContent" class="grid grid-cols-1 md:grid-cols-2 gap-6 fade-in">
+            <div class="space-y-4">
+                <div class="flex items-center p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors duration-200">
+                    <svg class="w-5 h-5 mr-2 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                    </svg>
+                    <span class="w-1/3 text-sm font-medium text-gray-600">Plan Name</span>
+                    <span id="modalPlanName" class="text-gray-900"></span>
+                </div>
+                <div class="flex items-center p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors duration-200">
+                    <svg class="w-5 h-5 mr-2 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.686 1M12 8c-1.11 0-2.08.402-2.686 1M3 3h18M3 21h18"></path>
+                    </svg>
+                    <span class="w-1/3 text-sm font-medium text-gray-600">Billing Cycle</span>
+                    <span id="modalBillingCycle" class="text-gray-900"></span>
+                </div>
+                <div class="flex items-center p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors duration-200">
+                    <svg class="w-5 h-5 mr-2 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.686 1M12 8c-1.11 0-2.08.402-2.686 1M3 3h18M3 21h18"></path>
+                    </svg>
+                    <span class="w-1/3 text-sm font-medium text-gray-600">Total Price (incl. 15% VAT)</span>
+                    <span id="modalTotalPrice" class="text-gray-900"></span>
+                </div>
+                <div class="flex items-center p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors duration-200">
+                    <svg class="w-5 h-5 mr-2 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 12h14M12 5v14"></path>
+                    </svg>
+                    <span class="w-1/3 text-sm font-medium text-gray-600">vCPUs</span>
+                    <span id="modalVCPUs" class="text-gray-900"></span>
+                </div>
+                <div class="flex items-center p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors duration-200">
+                    <svg class="w-5 h-5 mr-2 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4"></path>
+                    </svg>
+                    <span class="w-1/3 text-sm font-medium text-gray-600">RAM (GB)</span>
+                    <span id="modalRAM" class="text-gray-900"></span>
+                </div>
+            </div>
+            <div class="space-y-4">
+                <div class="flex items-center p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors duration-200">
+                    <svg class="w-5 h-5 mr-2 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z"></path>
+                    </svg>
+                    <span class="w-1/3 text-sm font-medium text-gray-600">OS Storage (GB)</span>
+                    <span id="modalOSStorage" class="text-gray-900"></span>
+                </div>
+                <div class="flex items-center p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors duration-200">
+                    <svg class="w-5 h-5 mr-2 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4m0 5c0 2.21-3.582 4-8 4s-8-1.79-8-4"></path>
+                    </svg>
+                    <span class="w-1/3 text-sm font-medium text-gray-600">Data Storage (GB)</span>
+                    <span id="modalDataStorage" class="text-gray-900"></span>
+                </div>
+                <div class="flex items-center p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors duration-200">
+                    <svg class="w-5 h-5 mr-2 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                    </svg>
+                    <span class="w-1/3 text-sm font-medium text-gray-600">Status</span>
+                    <span id="modalStatus" class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full"></span>
+                </div>
+                <div class="flex items-center p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors duration-200">
+                    <svg class="w-5 h-5 mr-2 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+                    </svg>
+                    <span class="w-1/3 text-sm font-medium text-gray-600">Start Date</span>
+                    <span id="modalStartDate" class="text-gray-900"></span>
+                </div>
+                <div class="flex items-center p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors duration-200">
+                    <svg class="w-5 h-5 mr-2 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+                    </svg>
+                    <span class="w-1/3 text-sm font-medium text-gray-600">End Date</span>
+                    <span id="modalEndDate" class="text-gray-900"></span>
+                </div>
+            </div>
         </div>
         <div class="mt-6 flex justify-end">
-            <button type="button" onclick="closeSubscriptionModal()" class="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700">Close</button>
+            <button type="button" onclick="closeSubscriptionModal()" class="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-200">
+                <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                </svg>
+                Close
+            </button>
         </div>
     </div>
 </div>
 
 <!-- JavaScript for Modal -->
 <script>
-    // Ensure the script runs after the DOM is fully loaded
     document.addEventListener('DOMContentLoaded', function () {
-        // Debugging: Log to confirm script is loaded
         console.log('Modal script loaded');
 
-        // Open modal with subscription details
         window.openSubscriptionModal = function (button) {
-            var id = button.dataset.subId;
-            var planName = button.dataset.planName;
-            var billingCycle = button.dataset.billingCycle;
-            var totalPrice = button.dataset.totalPrice;
-            var vcpus = button.dataset.vcpu;
-            var ram = button.dataset.ram;
-            var osStorage = button.dataset.osStorage;
-            var dataStorage = button.dataset.dataStorage;
-            var status = button.dataset.status;
-            var startDate = button.dataset.startDate;
-            var endDate = button.dataset.endDate;
+            const modal = document.getElementById('subscriptionModal');
+            const modalContent = document.querySelector('.modal-content');
+
+            if (!modal || !modalContent) {
+                console.error('Modal or modal content element not found', { modal, modalContent });
+                alert('Failed to open subscription details: Modal element not found.');
+                return;
+            }
+
+            const id = button.dataset.subId;
+            const planName = button.dataset.planName;
+            const billingCycle = button.dataset.billingCycle;
+            const totalPrice = button.dataset.totalPrice;
+            const vcpus = button.dataset.vcpu;
+            const ram = button.dataset.ram;
+            const osStorage = button.dataset.osStorage;
+            const dataStorage = button.dataset.dataStorage;
+            const status = button.dataset.status;
+            const startDate = button.dataset.startDate;
+            const endDate = button.dataset.endDate;
 
             console.log('Opening modal with:', { id, planName, billingCycle, totalPrice, vcpus, ram, osStorage, dataStorage, status, startDate, endDate });
+
             try {
                 document.getElementById('modalPlanName').textContent = planName || 'N/A';
                 document.getElementById('modalBillingCycle').textContent = billingCycle || 'N/A';
@@ -255,30 +346,45 @@ Customer Dashboard
                 document.getElementById('modalStatus').textContent = status || 'N/A';
                 document.getElementById('modalStartDate').textContent = startDate || 'N/A';
                 document.getElementById('modalEndDate').textContent = endDate || 'N/A';
-                var modal = document.getElementById('subscriptionModal');
-                if (modal) {
-                    modal.classList.remove('hidden');
+
+                const statusElement = document.getElementById('modalStatus');
+                statusElement.className = 'px-2 inline-flex text-xs leading-5 font-semibold rounded-full';
+                if (status && status.toLowerCase() === 'active') {
+                    statusElement.classList.add('bg-green-100', 'text-green-800');
+                } else if (status && status.toLowerCase() === 'pending') {
+                    statusElement.classList.add('bg-yellow-100', 'text-yellow-800');
                 } else {
-                    console.error('Modal element not found');
-                    alert('Failed to open subscription details: Modal element not found.');
+                    statusElement.classList.add('bg-red-100', 'text-red-800');
                 }
+
+                modal.classList.remove('hidden');
+                modalContent.style.transform = 'scale(1)';
+                modalContent.style.opacity = '1';
             } catch (error) {
                 console.error('Error opening modal:', error);
                 alert('Failed to open subscription details: ' + error.message);
             }
         };
 
-        // Close modal
         window.closeSubscriptionModal = function () {
             console.log('Closing modal');
+            const modal = document.getElementById('subscriptionModal');
+            const modalContent = document.querySelector('.modal-content');
+
+            if (!modal || !modalContent) {
+                console.error('Modal or modal content element not found', { modal, modalContent });
+                alert('Failed to close modal: Modal element not found.');
+                return;
+            }
+
             try {
-                var modal = document.getElementById('subscriptionModal');
-                if (modal) {
+                modalContent.style.transform = 'scale(0.95)';
+                modalContent.style.opacity = '0';
+                setTimeout(() => {
                     modal.classList.add('hidden');
-                } else {
-                    console.error('Modal element not found');
-                    alert('Failed to close modal: Modal element not found.');
-                }
+                    modalContent.style.transform = 'scale(0.95)';
+                    modalContent.style.opacity = '0';
+                }, 300);
             } catch (error) {
                 console.error('Error closing modal:', error);
                 alert('Failed to close modal: ' + error.message);
@@ -286,4 +392,21 @@ Customer Dashboard
         };
     });
 </script>
+
+<style>
+    .fade-in {
+        animation: fadeIn 0.5s ease-in;
+    }
+
+    @keyframes fadeIn {
+        0% { opacity: 0; transform: translateY(10px); }
+        100% { opacity: 1; transform: translateY(0); }
+    }
+
+    .modal-content {
+        transform: scale(0.95);
+        opacity: 0;
+        transition: transform 0.3s ease, opacity 0.3s ease;
+    }
+</style>
 {% endblock %}

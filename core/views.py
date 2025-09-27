@@ -233,7 +233,7 @@ class CustomerDashboardView(LoginRequiredMixin, VerificationRequiredMixin, View)
             return redirect('core:customer_profile_create')
 
 
-class CustomerSubscriptionsView(LoginRequiredMixin, VerificationRequiredMixin, View):
+class CustomerSubscriptionsView(LoginRequiredMixin, View):
     template_name = 'dashboard/customer/customer_subscriptions.html'
 
     def get(self, request):
@@ -241,9 +241,8 @@ class CustomerSubscriptionsView(LoginRequiredMixin, VerificationRequiredMixin, V
             customer = Customer.objects.get(user=request.user)
             subscriptions = Subscription.objects.filter(customer=customer).select_related('plan').order_by('-start_date')
 
-            # Compute prices and total prices (including 15% VAT) for each subscription
             subscription_data = []
-            VAT_RATE = Decimal('0.15')  # 15% VAT
+            VAT_RATE = Decimal('0.15')
             for subscription in subscriptions:
                 base_price = subscription.plan.get_price_for_billing_cycle(subscription.billing_cycle)
                 vat_amount = base_price * VAT_RATE
@@ -251,11 +250,10 @@ class CustomerSubscriptionsView(LoginRequiredMixin, VerificationRequiredMixin, V
                 subscription_data.append({
                     'subscription': subscription,
                     'base_price': base_price,
-                    'total_price': total_price  # Include total price with VAT
+                    'total_price': total_price
                 })
 
-            # Paginate the subscription_data
-            paginator = Paginator(subscription_data, 5) 
+            paginator = Paginator(subscription_data, 5)
             page = request.GET.get('page')
             try:
                 subscription_data_paginated = paginator.page(page)
@@ -264,36 +262,9 @@ class CustomerSubscriptionsView(LoginRequiredMixin, VerificationRequiredMixin, V
             except EmptyPage:
                 subscription_data_paginated = paginator.page(paginator.num_pages)
 
-            # Handle pending subscription from session (for guest users who logged in)
-            pending_subscription = None
-            if 'pending_subscription' in request.session:
-                pending_data = request.session['pending_subscription']
-                try:
-                    plan = SubscriptionPlan.objects.get(id=pending_data['plan_id'])
-                    base_price = plan.get_price_for_billing_cycle(pending_data['billing_cycle'])
-                    vat_amount = base_price * VAT_RATE
-                    total_price = base_price + vat_amount
-                    pending_subscription, created = Subscription.objects.get_or_create(
-                        customer=customer,
-                        plan=plan,
-                        billing_cycle=pending_data['billing_cycle'],
-                        status='pending',
-                        defaults={
-                            'start_date': timezone.now(),
-                            'end_date': timezone.now() + timedelta(days=self.get_days_for_billing_cycle(pending_data['billing_cycle']))
-                        }
-                    )
-                    if created:
-                        messages.info(request, f"{plan.name} ({pending_data['billing_cycle'].capitalize()}) has been added to your pending subscriptions.")
-                    del request.session['pending_subscription']
-                except SubscriptionPlan.DoesNotExist:
-                    messages.error(request, "Selected subscription plan is not available.")
-                    del request.session['pending_subscription']
-
             context = {
                 'subscriptions': subscription_data_paginated,
-                'subscription_count': len(subscription_data),  # Total subscriptions
-                'pending_subscription': pending_subscription,
+                'subscription_count': len(subscription_data),
                 'customer': customer,
                 'model_code': 'CustomerSubscriptions',
             }
@@ -308,51 +279,86 @@ class CustomerSubscriptionsView(LoginRequiredMixin, VerificationRequiredMixin, V
 
         if action == 'confirm' and subscription_id:
             try:
-                subscription = Subscription.objects.get(
-                    id=subscription_id,
-                    customer__user=request.user,
-                    status='pending'
-                )
-                base_price = subscription.plan.get_price_for_billing_cycle(subscription.billing_cycle)
-                vat_amount = base_price * Decimal('0.15')  # 15% VAT
-                total_price = base_price + vat_amount
-                invoice = Invoice.objects.create(
-                    customer=subscription.customer,
-                    subscription=subscription,
-                    amount=base_price,  # Store base price
-                    due_date=timezone.now() + timedelta(days=30),
-                    issue_date=timezone.now(),
-                    status='pending',
-                    tax=vat_amount,  # Store VAT amount
-                    total=total_price,  # Store total price with VAT
-                    subtotal_currency='ETB',
-                    tax_currency='ETB',
-                    total_currency='ETB',
-                )
-
-                invoice_url = request.build_absolute_uri(reverse('core:invoice_detail', args=[invoice.id]))
-                subject = "New Invoice Generated"
-                message = render_to_string('emails/invoice_email.html', {
-                    'user': request.user,
-                    'invoice': invoice,
-                    'subscription': subscription,
-                    'invoice_url': invoice_url,
-                })
-                try:
-                    send_mail(
-                        subject,
-                        message,
-                        settings.DEFAULT_FROM_EMAIL,
-                        [subscription.customer.user.email],
-                        html_message=message,
-                        fail_silently=False,
+                with transaction.atomic():
+                    subscription = Subscription.objects.get(
+                        id=subscription_id,
+                        customer__user=request.user,
+                        status='pending'
                     )
-                    messages.success(request, "Subscription confirmed! Please proceed to payment.")
-                except Exception as e:
-                    messages.warning(request, f"Subscription confirmed, but email sending failed: {str(e)}. Please contact support.")
-                return redirect('core:customer_invoices')
+                    subscription.status = 'confirmed'
+                    subscription.save()
+
+                    base_price = subscription.plan.get_price_for_billing_cycle(subscription.billing_cycle)
+                    vat_amount = base_price * Decimal('0.15')
+                    total_price = base_price + vat_amount
+                    try:
+                        invoice = Invoice.objects.create(
+                            customer=subscription.customer,
+                            subscription=subscription,
+                            amount=base_price,
+                            due_date=timezone.now() + timedelta(days=30),
+                            issue_date=timezone.now(),
+                            status='confirmed',
+                            tax=vat_amount,
+                            total=total_price,
+                            subtotal_currency='ETB',
+                            tax_currency='ETB',
+                            total_currency='ETB',
+                        )
+                        print(f"[DEBUG] Subscription {subscription.id} status changed to 'confirmed'. Invoice {invoice.invoice_number} created with status 'confirmed'.")
+                    except Exception as e:
+                        print(f"[ERROR] Failed to create invoice for subscription {subscription.id}: {str(e)}")
+                        messages.error(request, f"Subscription confirmed, but failed to create invoice: {str(e)}. Please contact support.")
+                        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                            return JsonResponse({
+                                'success': True,  # Subscription confirmed, but invoice failed
+                                'subscription_id': subscription.id,
+                                'status': subscription.status,
+                                'message': 'Subscription confirmed, but invoice creation failed. Please contact support.'
+                            })
+                        return redirect('core:customer_subscriptions')
+
+                    invoice_url = request.build_absolute_uri(reverse('core:invoice_detail', args=[invoice.id]))
+                    subject = "New Invoice Generated"
+                    message = render_to_string('emails/invoice_email.html', {
+                        'user': request.user,
+                        'invoice': invoice,
+                        'subscription': subscription,
+                        'invoice_url': invoice_url,
+                    })
+                    try:
+                        send_mail(
+                            subject,
+                            message,
+                            settings.DEFAULT_FROM_EMAIL,
+                            [subscription.customer.user.email],
+                            html_message=message,
+                            fail_silently=False,
+                        )
+                        messages.success(request, "Subscription confirmed! Please proceed to payment.")
+                    except Exception as e:
+                        print(f"[DEBUG] Email sending failed: {str(e)}")
+                        messages.warning(request, f"Subscription confirmed, but email sending failed: {str(e)}. Please contact support.")
+
+                    if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                        return JsonResponse({
+                            'success': True,
+                            'subscription_id': subscription.id,
+                            'status': subscription.status,
+                            'invoice_status': invoice.status,
+                            'message': 'Subscription confirmed! Please proceed to payment.'
+                        })
+                    return redirect('core:customer_invoices')
             except Subscription.DoesNotExist:
+                print(f"[DEBUG] Subscription {subscription_id} not found or not in 'pending' status.")
                 messages.error(request, "Invalid subscription or not authorized.")
+                if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                    return JsonResponse({'success': False, 'error': 'Invalid subscription or not authorized.'}, status=400)
+            except Exception as e:
+                print(f"[ERROR] Failed to confirm subscription {subscription_id}: {str(e)}")
+                messages.error(request, f"Failed to confirm subscription: {str(e)}")
+                if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                    return JsonResponse({'success': False, 'error': f'Failed to confirm subscription: {str(e)}'}, status=500)
         elif action == 'cancel' and subscription_id:
             try:
                 subscription = Subscription.objects.get(
@@ -361,20 +367,17 @@ class CustomerSubscriptionsView(LoginRequiredMixin, VerificationRequiredMixin, V
                     status='pending'
                 )
                 subscription.delete()
+                print(f"[DEBUG] Subscription {subscription_id} cancelled and deleted.")
                 messages.success(request, "Pending subscription cancelled successfully.")
+                if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                    return JsonResponse({'success': True, 'message': 'Subscription cancelled.'})
             except Subscription.DoesNotExist:
+                print(f"[DEBUG] Subscription {subscription_id} not found for cancellation.")
                 messages.error(request, "Subscription not found.")
+                if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                    return JsonResponse({'success': False, 'error': 'Subscription not found.'}, status=400)
 
         return redirect('core:customer_subscriptions')
-
-    def get_days_for_billing_cycle(self, billing_cycle):
-        days_map = {
-            'monthly': 30,
-            'quarterly': 90,
-            'semi-annual': 180,
-            'yearly': 365
-        }
-        return days_map.get(billing_cycle, 30)
 
 class CustomerInvoicesView(LoginRequiredMixin, VerificationRequiredMixin, View):
     template_name = 'dashboard/customer/customer_invoices.html'
@@ -549,29 +552,49 @@ def payment(request, invoice_id):
         transaction_id = request.POST.get('transaction_id')
         payment_method = request.POST.get('payment_method', 'manual')
 
-        payment = Payment.objects.create(
-            invoice=invoice,
-            amount=invoice.total,
-            payment_method=payment_method,
-            transaction_id=transaction_id,
-        )
+        with transaction.atomic():
+            payment = Payment.objects.create(
+                invoice=invoice,
+                amount=invoice.total,
+                payment_method=payment_method,
+                transaction_id=transaction_id,
+            )
 
-        invoice.status = 'paid'
-        invoice.save()
+            invoice.status = 'paid'
+            invoice.save()
 
-        if invoice.subscription and invoice.subscription.status == 'pending':
-            subscription = invoice.subscription
-            subscription.status = 'active'
-            subscription.start_date = timezone.now()
-            subscription.end_date = timezone.now() + timedelta(days=30)
-            subscription.save()
+            if invoice.subscription and invoice.subscription.status in ['pending', 'confirmed']:
+                subscription = invoice.subscription
+                subscription.status = 'active'
+                subscription.start_date = timezone.now()
+                subscription.end_date = timezone.now() + timedelta(days=30)
+                subscription.save()
 
-            dashboard_url = request.build_absolute_uri(reverse('core:customer_dashboard'))
-            subject = "Subscription Activated"
-            message = render_to_string('emails/subscription_email.html', {
+                print(f"[DEBUG] Subscription {subscription.id} status changed to 'active' after payment.")
+
+                dashboard_url = request.build_absolute_uri(reverse('core:customer_dashboard'))
+                subject = "Subscription Activated"
+                message = render_to_string('emails/subscription_email.html', {
+                    'user': request.user,
+                    'subscription': subscription,
+                    'dashboard_url': dashboard_url,
+                })
+                send_mail(
+                    subject,
+                    message,
+                    settings.DEFAULT_FROM_EMAIL,
+                    [invoice.customer.user.email],
+                    html_message=message,
+                    fail_silently=False,
+                )
+
+            invoices_url = request.build_absolute_uri(reverse('core:customer_invoices'))
+            subject = "Payment Confirmation"
+            message = render_to_string('emails/payment_email.html', {
                 'user': request.user,
-                'subscription': subscription,
-                'dashboard_url': dashboard_url,
+                'invoice': invoice,
+                'payment': payment,
+                'invoices_url': invoices_url,
             })
             send_mail(
                 subject,
@@ -582,25 +605,8 @@ def payment(request, invoice_id):
                 fail_silently=False,
             )
 
-        invoices_url = request.build_absolute_uri(reverse('core:customer_invoices'))
-        subject = "Payment Confirmation"
-        message = render_to_string('emails/payment_email.html', {
-            'user': request.user,
-            'invoice': invoice,
-            'payment': payment,
-            'invoices_url': invoices_url,
-        })
-        send_mail(
-            subject,
-            message,
-            settings.DEFAULT_FROM_EMAIL,
-            [invoice.customer.user.email],
-            html_message=message,
-            fail_silently=False,
-        )
-
-        messages.success(request, "Payment successful! Your subscription is now active.")
-        return redirect('core:customer_dashboard')
+            messages.success(request, "Payment successful! Your subscription is now active.")
+            return redirect('core:customer_dashboard')
 
     context = {'invoice': invoice, 'model_code': 'Payment'}
     return render(request, 'dashboard/admin/payment.html', context)
