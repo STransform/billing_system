@@ -18,7 +18,7 @@ from openstack import connection
 from openstack.exceptions import SDKException
 from django.views.generic import View
 from django.urls import reverse_lazy, reverse
-from .models import FlavorPrice, Orders, VolumePrice, IpPrice, RouterPrice, SnapShotPrice, ImagePrice, Instance, ContactMessage
+from .models import FlavorPrice, Orders, VolumePrice, IpPrice, RouterPrice, SnapShotPrice, ImagePrice, Instance, ContactMessage, generate_invoice_number
 from .models import Invoice, SubscriptionPlan, Customer, Subscription, Cart, CartItem, Payment
 from .forms import FlavorPriceForm, VolumePriceForm, IpPriceForm, RouterPriceForm, SnapShotPriceForm, ImagePriceForm
 from uuid import uuid4
@@ -182,11 +182,9 @@ class CustomerDashboardView(LoginRequiredMixin, VerificationRequiredMixin, View)
             total_invoices = Invoice.objects.filter(customer=customer).count()
             total_active_subscriptions = Subscription.objects.filter(customer=customer, status='active').count()
             recent_invoices = Invoice.objects.filter(customer=customer).order_by('-issue_date')[:5]
-            # Order pending subscriptions by start_date in descending order (newest first)
             pending_subscriptions = Subscription.objects.filter(customer=customer, status='pending').order_by('-start_date')
 
-            # Compute prices with VAT for pending subscriptions
-            VAT_RATE = Decimal('0.15')  # 15% VAT
+            VAT_RATE = Decimal('0.15')
             pending_subscription_data = []
             for subscription in pending_subscriptions:
                 base_price = subscription.plan.get_price_for_billing_cycle(subscription.billing_cycle)
@@ -195,11 +193,11 @@ class CustomerDashboardView(LoginRequiredMixin, VerificationRequiredMixin, View)
                 pending_subscription_data.append({
                     'subscription': subscription,
                     'base_price': base_price,
+                    'vat_amount': vat_amount,
                     'total_price': total_price
                 })
 
-            # Paginate the pending_subscription_data
-            paginator = Paginator(pending_subscription_data, 5) 
+            paginator = Paginator(pending_subscription_data, 5)
             page = request.GET.get('page')
             try:
                 pending_subscription_data_paginated = paginator.page(page)
@@ -219,8 +217,8 @@ class CustomerDashboardView(LoginRequiredMixin, VerificationRequiredMixin, View)
                 'total_invoices': total_invoices,
                 'total_active_subscriptions': total_active_subscriptions,
                 'recent_invoices': recent_invoices,
-                'pending_subscriptions': pending_subscription_data_paginated,  # Use paginated data
-                'pending_subscription_count': len(pending_subscription_data),  # Total pending subscriptions
+                'pending_subscriptions': pending_subscription_data_paginated,
+                'pending_subscription_count': len(pending_subscription_data),
                 'cart': cart,
                 'total': total,
                 'vat': vat,
@@ -241,8 +239,8 @@ class CustomerSubscriptionsView(LoginRequiredMixin, View):
             customer = Customer.objects.get(user=request.user)
             subscriptions = Subscription.objects.filter(customer=customer).select_related('plan').order_by('-start_date')
 
-            subscription_data = []
             VAT_RATE = Decimal('0.15')
+            subscription_data = []
             for subscription in subscriptions:
                 base_price = subscription.plan.get_price_for_billing_cycle(subscription.billing_cycle)
                 vat_amount = base_price * VAT_RATE
@@ -250,6 +248,7 @@ class CustomerSubscriptionsView(LoginRequiredMixin, View):
                 subscription_data.append({
                     'subscription': subscription,
                     'base_price': base_price,
+                    'vat_amount': vat_amount,
                     'total_price': total_price
                 })
 
@@ -295,6 +294,7 @@ class CustomerSubscriptionsView(LoginRequiredMixin, View):
                         invoice = Invoice.objects.create(
                             customer=subscription.customer,
                             subscription=subscription,
+                            invoice_number=generate_invoice_number(),
                             amount=base_price,
                             due_date=timezone.now() + timedelta(days=30),
                             issue_date=timezone.now(),
@@ -311,7 +311,7 @@ class CustomerSubscriptionsView(LoginRequiredMixin, View):
                         messages.error(request, f"Subscription confirmed, but failed to create invoice: {str(e)}. Please contact support.")
                         if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
                             return JsonResponse({
-                                'success': True,  # Subscription confirmed, but invoice failed
+                                'success': True,
                                 'subscription_id': subscription.id,
                                 'status': subscription.status,
                                 'message': 'Subscription confirmed, but invoice creation failed. Please contact support.'
@@ -430,18 +430,16 @@ class CustomerProfileCreateView(LoginRequiredMixin, View):
             messages.info(request, "You already have a customer profile.")
             return redirect('core:customer_dashboard')
 
-        # fields that exist in CustomUser
         initial_data = {
             'name': f"{request.user.first_name} {request.user.last_name}".strip() or "",
             'phone': request.user.phone_number or "",
             'company': request.user.company_name or "",
             'address': request.user.address or "",
-            # Remove references to non-existent fields in CustomUser
-            # 'city': request.user.city or "",  
-            # 'state': request.user.state or "",  
-            # 'country': request.user.country or "",  
-            # 'tin_number': request.user.tin_number or "",  
-            # 'preferred_payment_method': request.user.preferred_payment_method or "",  
+            'city': request.user.city or "",
+            'state': request.user.state or "",
+            'country': request.user.country or "",
+            'tin_number': request.user.tin_number or "",
+            'preferred_payment_method': request.user.preferred_payment_method or "",
         }
 
         form = CustomerForm(initial=initial_data)
@@ -462,32 +460,38 @@ class CustomerProfileCreateView(LoginRequiredMixin, View):
                 customer.save()
                 messages.success(request, "Customer profile created successfully.")
 
-                # Handle pending subscription plan from session
-                pending_plan_id = request.session.get('pending_subscription_plan_id')
-                if pending_plan_id:
+                days_map = {
+                    'monthly': 30,
+                    'quarterly': 90,
+                    'semi-annual': 180,
+                    'yearly': 365
+                }
+                # Handle pending subscription from session
+                pending_subscription = request.session.get('pending_subscription')
+                if pending_subscription:
                     try:
-                        plan = SubscriptionPlan.objects.get(id=pending_plan_id)
-                        billing_cycle = request.session.get('pending_subscription', {}).get('billing_cycle', 'monthly')
-                        days = {'monthly': 30, 'quarterly': 90, 'semi-annual': 180, 'yearly': 365}.get(billing_cycle, 30)
-                        Subscription.objects.create(
+                        plan = SubscriptionPlan.objects.get(id=pending_subscription['plan_id'])
+                        billing_cycle = pending_subscription.get('billing_cycle', 'monthly')
+                        if billing_cycle not in days_map:
+                            billing_cycle = 'monthly'
+                        days = days_map[billing_cycle]
+                        Subscription.objects.get_or_create(
                             customer=customer,
                             plan=plan,
                             billing_cycle=billing_cycle,
                             status='pending',
-                            start_date=timezone.now(),
-                            end_date=timezone.now() + timedelta(days=days)
+                            defaults={
+                                'start_date': timezone.now(),
+                                'end_date': timezone.now() + timedelta(days=days)
+                            }
                         )
                         messages.info(request, f"{plan.name} ({billing_cycle.capitalize()}) has been added to your pending subscriptions.")
-                        if 'pending_subscription_plan_id' in request.session:
-                            del request.session['pending_subscription_plan_id']
-                        if 'pending_subscription' in request.session:
-                            del request.session['pending_subscription']
                     except SubscriptionPlan.DoesNotExist:
                         messages.error(request, "Selected subscription plan no longer available.")
-                        if 'pending_subscription_plan_id' in request.session:
-                            del request.session['pending_subscription_plan_id']
+                    finally:
                         if 'pending_subscription' in request.session:
                             del request.session['pending_subscription']
+                            request.session.modified = True
 
                 # Convert guest cart to authenticated user
                 session_key = request.session.session_key
@@ -499,23 +503,18 @@ class CustomerProfileCreateView(LoginRequiredMixin, View):
                         defaults={'created_at': timezone.now()}
                     )
                     for item in guest_cart.items.all():
-                        CartItem.objects.create(
+                        CartItem.objects.get_or_create(
                             cart=cart,
                             plan=item.plan,
                             billing_cycle=item.billing_cycle,
-                            price=item.price
+                            price=item.price,
+                            defaults={'quantity': item.quantity}
                         )
                     guest_cart.delete()
 
                 # Convert cart items to pending subscriptions
                 cart = Cart.objects.filter(user=request.user).first()
                 if cart and cart.items.exists():
-                    days_map = {
-                        'monthly': 30,
-                        'quarterly': 90,
-                        'semi-annual': 180,
-                        'yearly': 365
-                    }
                     for item in cart.items.all():
                         days = days_map.get(item.billing_cycle, 30)
                         Subscription.objects.get_or_create(
@@ -539,11 +538,6 @@ class CustomerProfileCreateView(LoginRequiredMixin, View):
 
         return render(request, self.template_name, {'form': form, 'model_code': 'CustomerProfile'})
 
-    def calculate_end_date(self, plan):
-        start_date = timezone.now()
-        days = {'monthly': 30, 'quarterly': 90, 'yearly': 365}.get(plan.billing_cycle, 30)
-        return start_date + timedelta(days=days)
-
 @login_required
 def payment(request, invoice_id):
     invoice = get_object_or_404(Invoice, id=invoice_id, customer__user=request.user)
@@ -555,7 +549,7 @@ def payment(request, invoice_id):
         with transaction.atomic():
             payment = Payment.objects.create(
                 invoice=invoice,
-                amount=invoice.total,
+                amount=invoice.total,  # Use invoice.total (includes VAT)
                 payment_method=payment_method,
                 transaction_id=transaction_id,
             )
@@ -567,7 +561,13 @@ def payment(request, invoice_id):
                 subscription = invoice.subscription
                 subscription.status = 'active'
                 subscription.start_date = timezone.now()
-                subscription.end_date = timezone.now() + timedelta(days=30)
+                days_map = {
+                    'monthly': 30,
+                    'quarterly': 90,
+                    'semi-annual': 180,
+                    'yearly': 365
+                }
+                subscription.end_date = timezone.now() + timedelta(days=days_map.get(subscription.billing_cycle, 30))
                 subscription.save()
 
                 print(f"[DEBUG] Subscription {subscription.id} status changed to 'active' after payment.")
