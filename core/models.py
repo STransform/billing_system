@@ -96,11 +96,12 @@ class Payment(models.Model):
         max_length=50,
         choices=[('bank_transfer', 'Bank Transfer'), ('telebirr', 'Telebirr')]
     )
-    transaction_id = models.CharField(max_length=100, blank=True)
+    transaction_id = models.CharField(max_length=100, blank=True, null=True)  
     reference_number = models.CharField(max_length=100, blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
+
     def __str__(self):
-        return f"Payment {self.transaction_id} for Invoice {self.invoice.invoice_number}"
+        return f"Payment {self.transaction_id or 'N/A'} for Invoice {self.invoice.invoice_number}"
 class Ticket(models.Model):
     project = models.ForeignKey(Project, on_delete=models.CASCADE, related_name="tickets")
     subject = models.CharField(max_length=255)

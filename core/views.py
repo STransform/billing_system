@@ -13,7 +13,7 @@ from django.core.mail import send_mail
 from requests import request
 from django.views.generic import DetailView
 from core.utils import sync_subscription_plans
-from .forms import ContactForm, CustomerForm
+from .forms import ContactForm, CustomerForm, PaymentForm
 from openstack import connection
 from openstack.exceptions import SDKException
 from django.views.generic import View
@@ -538,78 +538,102 @@ class CustomerProfileCreateView(LoginRequiredMixin, View):
 
         return render(request, self.template_name, {'form': form, 'model_code': 'CustomerProfile'})
 
-@login_required
-def payment(request, invoice_id):
-    invoice = get_object_or_404(Invoice, id=invoice_id, customer__user=request.user)
+class PaymentView(LoginRequiredMixin, View):
+    template_name = 'dashboard/customer/payment.html'  
 
-    if request.method == 'POST':
-        transaction_id = request.POST.get('transaction_id')
-        payment_method = request.POST.get('payment_method', 'manual')
+    def get(self, request, invoice_id):
+        invoice = get_object_or_404(Invoice, id=invoice_id, customer__user=request.user)
+        form = PaymentForm(initial={'invoice': invoice, 'amount': invoice.total})
+        context = {
+            'form': form,
+            'invoice': invoice,
+            'model_code': 'Payment'
+        }
+        return render(request, self.template_name, context)
 
-        with transaction.atomic():
-            payment = Payment.objects.create(
-                invoice=invoice,
-                amount=invoice.total,  # Use invoice.total (includes VAT)
-                payment_method=payment_method,
-                transaction_id=transaction_id,
-            )
+    def post(self, request, invoice_id):
+        invoice = get_object_or_404(Invoice, id=invoice_id, customer__user=request.user)
+        form = PaymentForm(request.POST)
+        if form.is_valid():
+            try:
+                with transaction.atomic():
+                    payment = Payment(
+                        invoice=invoice,
+                        amount=form.cleaned_data['amount'],
+                        payment_method=form.cleaned_data['payment_method'],
+                        transaction_id=form.cleaned_data['reference_number'] or None,  # Use reference_number or None
+                        reference_number=form.cleaned_data['reference_number'] or None
+                    )
+                    payment.save()
 
-            invoice.status = 'paid'
-            invoice.save()
+                    # Update invoice status
+                    total_paid = Payment.objects.filter(invoice=invoice).aggregate(total=models.Sum('amount'))['total'] or 0
+                    if total_paid >= invoice.total:
+                        invoice.status = 'paid'
+                        invoice.save()
 
-            if invoice.subscription and invoice.subscription.status in ['pending', 'confirmed']:
-                subscription = invoice.subscription
-                subscription.status = 'active'
-                subscription.start_date = timezone.now()
-                days_map = {
-                    'monthly': 30,
-                    'quarterly': 90,
-                    'semi-annual': 180,
-                    'yearly': 365
-                }
-                subscription.end_date = timezone.now() + timedelta(days=days_map.get(subscription.billing_cycle, 30))
-                subscription.save()
+                        # Activate subscription if applicable
+                        if invoice.subscription and invoice.subscription.status in ['pending', 'confirmed']:
+                            subscription = invoice.subscription
+                            subscription.status = 'active'
+                            subscription.start_date = timezone.now()
+                            days_map = {
+                                'monthly': 30,
+                                'quarterly': 90,
+                                'semi-annual': 180,
+                                'yearly': 365
+                            }
+                            subscription.end_date = timezone.now() + timedelta(days=days_map.get(subscription.billing_cycle, 30))
+                            subscription.save()
 
-                print(f"[DEBUG] Subscription {subscription.id} status changed to 'active' after payment.")
+                            # Send subscription email
+                            dashboard_url = request.build_absolute_uri(reverse('core:customer_dashboard'))
+                            subject = "Subscription Activated"
+                            message = render_to_string('emails/subscription_email.html', {
+                                'user': request.user,
+                                'subscription': subscription,
+                                'dashboard_url': dashboard_url,
+                            })
+                            send_mail(
+                                subject,
+                                message,
+                                settings.DEFAULT_FROM_EMAIL,
+                                [invoice.customer.user.email],
+                                html_message=message,
+                                fail_silently=False,
+                            )
 
-                dashboard_url = request.build_absolute_uri(reverse('core:customer_dashboard'))
-                subject = "Subscription Activated"
-                message = render_to_string('emails/subscription_email.html', {
-                    'user': request.user,
-                    'subscription': subscription,
-                    'dashboard_url': dashboard_url,
-                })
-                send_mail(
-                    subject,
-                    message,
-                    settings.DEFAULT_FROM_EMAIL,
-                    [invoice.customer.user.email],
-                    html_message=message,
-                    fail_silently=False,
-                )
+                    # Send payment confirmation email
+                    invoices_url = request.build_absolute_uri(reverse('core:customer_invoices'))
+                    subject = "Payment Confirmation"
+                    message = render_to_string('emails/payment_email.html', {
+                        'user': request.user,
+                        'invoice': invoice,
+                        'payment': payment,
+                        'invoices_url': invoices_url,
+                    })
+                    send_mail(
+                        subject,
+                        message,
+                        settings.DEFAULT_FROM_EMAIL,
+                        [invoice.customer.user.email],
+                        html_message=message,
+                        fail_silently=False,
+                    )
 
-            invoices_url = request.build_absolute_uri(reverse('core:customer_invoices'))
-            subject = "Payment Confirmation"
-            message = render_to_string('emails/payment_email.html', {
-                'user': request.user,
-                'invoice': invoice,
-                'payment': payment,
-                'invoices_url': invoices_url,
-            })
-            send_mail(
-                subject,
-                message,
-                settings.DEFAULT_FROM_EMAIL,
-                [invoice.customer.user.email],
-                html_message=message,
-                fail_silently=False,
-            )
+                    messages.success(request, "Payment submitted successfully. Awaiting confirmation.")
+                    return redirect('core:customer_dashboard')
+            except Exception as e:
+                messages.error(request, f"Error processing payment: {str(e)}")
+        else:
+            messages.error(request, "Please correct the errors below.")
 
-            messages.success(request, "Payment successful! Your subscription is now active.")
-            return redirect('core:customer_dashboard')
-
-    context = {'invoice': invoice, 'model_code': 'Payment'}
-    return render(request, 'dashboard/admin/payment.html', context)
+        context = {
+            'form': form,
+            'invoice': invoice,
+            'model_code': 'Payment'
+        }
+        return render(request, self.template_name, context)
 
 def add_to_cart(request, plan_id=None):
     if request.method == 'POST':
