@@ -71,31 +71,70 @@ def verify_email(request, token):
         user.save()
         messages.success(request, "Email verified successfully! Please log in.")
         session_key = request.session.session_key
+        days_map = {
+            'monthly': 30,
+            'quarterly': 90,
+            'semi-annual': 180,
+            'yearly': 365
+        }
         if session_key:
             guest_cart = Cart.objects.filter(session_id=session_key, user__isnull=True).first()
             if guest_cart:
-                guest_cart.user = user
-                guest_cart.session_id = None
-                guest_cart.save()
-                days_map = {
-                    'monthly': 30,
-                    'quarterly': 90,
-                    'semi-annual': 180,
-                    'yearly': 365
-                }
+                cart, created = Cart.objects.get_or_create(
+                    user=user,
+                    session_id=None,
+                    defaults={'created_at': timezone.now()}
+                )
                 for item in guest_cart.items.all():
+                    CartItem.objects.get_or_create(
+                        cart=cart,
+                        plan=item.plan,
+                        billing_cycle=item.billing_cycle,
+                        price=item.price,
+                        defaults={'quantity': item.quantity}
+                    )
+                guest_cart.delete()
+                # Convert cart to pending subscriptions
+                for item in cart.items.all():
                     days = days_map.get(item.billing_cycle, 30)
                     Subscription.objects.get_or_create(
                         customer=customer,
                         plan=item.plan,
+                        billing_cycle=item.billing_cycle,
                         status='pending',
                         defaults={
                             'start_date': timezone.now(),
                             'end_date': timezone.now() + timedelta(days=days)
                         }
                     )
-                guest_cart.delete()
+                cart.delete()
                 messages.info(request, "Your cart items have been added to your pending subscriptions.")
+        # Handle pending subscription from session
+        pending_subscription = request.session.get('pending_subscription')
+        if pending_subscription:
+            try:
+                plan = SubscriptionPlan.objects.get(id=pending_subscription['plan_id'])
+                billing_cycle = pending_subscription.get('billing_cycle', 'monthly')
+                if billing_cycle not in days_map:
+                    billing_cycle = 'monthly'
+                days = days_map[billing_cycle]
+                Subscription.objects.get_or_create(
+                    customer=customer,
+                    plan=plan,
+                    billing_cycle=billing_cycle,
+                    status='pending',
+                    defaults={
+                        'start_date': timezone.now(),
+                        'end_date': timezone.now() + timedelta(days=days)
+                    }
+                )
+                messages.info(request, f"{plan.name} ({billing_cycle.capitalize()}) has been added to your pending subscriptions.")
+            except SubscriptionPlan.DoesNotExist:
+                messages.error(request, "Selected subscription plan is no longer available.")
+            finally:
+                if 'pending_subscription' in request.session:
+                    del request.session['pending_subscription']
+                    request.session.modified = True
     except Customer.DoesNotExist:
         messages.error(request, "Invalid verification token.")
     return redirect('accounts:login')
@@ -116,6 +155,7 @@ class CustomLoginView(LoginView):
 
     def form_valid(self, form):
         user = form.get_user()
+        old_session_key = self.request.session.session_key
         login(self.request, user)
 
         if user.is_superuser:
@@ -131,7 +171,6 @@ class CustomLoginView(LoginView):
             messages.warning(self.request, "Please create a customer profile to access your dashboard.")
             return redirect('core:customer_profile_create')
 
-        # Handle OpenStack user project ID
         try:
             cloud_user = conn.identity.find_user(user.username)
             if cloud_user and "default_project_id" in cloud_user:
@@ -140,55 +179,66 @@ class CustomLoginView(LoginView):
             pass
 
         # Transfer guest cart to authenticated user
-        session_key = self.request.session.session_key
-        guest_cart = Cart.objects.filter(session_id=session_key, user__isnull=True).first()
-        if guest_cart:
-            cart, created = Cart.objects.get_or_create(user=user, session_id=None, defaults={'created_at': timezone.now()})
-            for item in guest_cart.items.all():
-                CartItem.objects.create(
-                    cart=cart,
-                    plan=item.plan,
-                    billing_cycle=item.billing_cycle,
-                    price=item.price
+        days_map = {
+            'monthly': 30,
+            'quarterly': 90,
+            'semi-annual': 180,
+            'yearly': 365
+        }
+        if old_session_key:
+            guest_cart = Cart.objects.filter(session_id=old_session_key, user__isnull=True).first()
+            if guest_cart:
+                cart, created = Cart.objects.get_or_create(
+                    user=user,
+                    session_id=None,
+                    defaults={'created_at': timezone.now()}
                 )
-            guest_cart.delete()
+                for item in guest_cart.items.all():
+                    CartItem.objects.get_or_create(
+                        cart=cart,
+                        plan=item.plan,
+                        billing_cycle=item.billing_cycle,
+                        price=item.price,
+                        defaults={'quantity': item.quantity}
+                    )
+                guest_cart.delete()
 
-        # Handle pending subscription plan from session
-        pending_plan_id = self.request.session.get('pending_subscription_plan_id')
-        if pending_plan_id:
+        # Handle pending subscription from session
+        pending_subscription = self.request.session.get('pending_subscription')
+        if pending_subscription:
             try:
-                plan = SubscriptionPlan.objects.get(id=pending_plan_id)
+                plan = SubscriptionPlan.objects.get(id=pending_subscription['plan_id'])
+                billing_cycle = pending_subscription.get('billing_cycle', 'monthly')
+                if billing_cycle not in days_map:
+                    billing_cycle = 'monthly'
+                days = days_map[billing_cycle]
                 Subscription.objects.get_or_create(
                     customer=customer,
                     plan=plan,
+                    billing_cycle=billing_cycle,
                     status='pending',
                     defaults={
                         'start_date': timezone.now(),
-                        'end_date': timezone.now() + timedelta(days=30)
+                        'end_date': timezone.now() + timedelta(days=days)
                     }
                 )
-                messages.info(self.request, f"{plan.name} has been added to your pending subscriptions.")
-                if 'pending_subscription_plan_id' in self.request.session:
-                    del self.request.session['pending_subscription_plan_id']
+                messages.info(self.request, f"{plan.name} ({billing_cycle.capitalize()}) has been added to your pending subscriptions.")
             except SubscriptionPlan.DoesNotExist:
                 messages.error(self.request, "Selected subscription plan is no longer available.")
-                if 'pending_subscription_plan_id' in self.request.session:
-                    del self.request.session['pending_subscription_plan_id']
+            finally:
+                if 'pending_subscription' in self.request.session:
+                    del self.request.session['pending_subscription']
+                    self.request.session.modified = True
 
         # Convert cart items to pending subscriptions
         cart = Cart.objects.filter(user=user).first()
         if cart and cart.items.exists():
-            days_map = {
-                'monthly': 30,
-                'quarterly': 90,
-                'semi-annual': 180,
-                'yearly': 365
-            }
             for item in cart.items.all():
                 days = days_map.get(item.billing_cycle, 30)
                 Subscription.objects.get_or_create(
                     customer=customer,
                     plan=item.plan,
+                    billing_cycle=item.billing_cycle,
                     status='pending',
                     defaults={
                         'start_date': timezone.now(),
@@ -246,12 +296,12 @@ def confirm_subscription(request, subscription_id):
             customer=subscription.customer,
             subscription=subscription,
             invoice_number=f"INV-{uuid4().hex[:8]}",
-            amount=subscription.plan.monthly_price,
+            amount=subscription.plan.get_price_for_billing_cycle(subscription.billing_cycle),
             due_date=timezone.now() + timedelta(days=30),
             issue_date=timezone.now(),
             status='pending',
             tax=Decimal('0.00'),
-            total=subscription.plan.monthly_price,
+            total=subscription.plan.get_price_for_billing_cycle(subscription.billing_cycle),
             subtotal_currency='ETB',
             tax_currency='ETB',
             total_currency='ETB',

@@ -3,7 +3,6 @@
 {% block content %}
 <div class="flex items-center justify-center min-h-screen bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
   <div class="max-w-6xl w-full bg-white p-10 rounded-2xl shadow-lg">
-   
     <!-- Logo & Header -->
     <div class="text-center mb-8">
       <a href="{% url 'core:landing_page' %}">
@@ -35,84 +34,153 @@
       </div>
     {% endif %}
     <!-- Form -->
-    <form method="post" class="space-y-8">
+    <form method="post" class="space-y-8" id="signup-form">
       {% csrf_token %}
-     
       <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
-       
         <!-- Left side -->
         <div class="space-y-6">
           <div>
             <label class="block text-base font-medium text-gray-700">{{ form.username.label }}</label>
-            {{ form.username }} {{ form.username.errors }}
+            {{ form.username }}
+            {% if form.username.errors %}
+              <p class="mt-1 text-sm text-red-600">{{ form.username.errors }}</p>
+            {% endif %}
           </div>
           <div>
             <label class="block text-base font-medium text-gray-700">{{ form.email.label }}</label>
-            {{ form.email }} {{ form.email.errors }}
+            {{ form.email }}
+            {% if form.email.errors %}
+              <p class="mt-1 text-sm text-red-600">{{ form.email.errors }}</p>
+            {% endif %}
           </div>
           <div>
             <label class="block text-base font-medium text-gray-700">{{ form.first_name.label }}</label>
-            {{ form.first_name }} {{ form.first_name.errors }}
+            {{ form.first_name }}
+            {% if form.first_name.errors %}
+              <p class="mt-1 text-sm text-red-600">{{ form.first_name.errors }}</p>
+            {% endif %}
           </div>
           <div>
             <label class="block text-base font-medium text-gray-700">{{ form.last_name.label }}</label>
-            {{ form.last_name }} {{ form.last_name.errors }}
+            {{ form.last_name }}
+            {% if form.last_name.errors %}
+              <p class="mt-1 text-sm text-red-600">{{ form.last_name.errors }}</p>
+            {% endif %}
           </div>
-           <div>
+          <div>
             <label class="block text-base font-medium text-gray-700">{{ form.phone_number.label }}</label>
-            {{ form.phone_number }} {{ form.phone_number.errors }}
+            {{ form.phone_number }}
+            {% if form.phone_number.errors %}
+              <p class="mt-1 text-sm text-red-600">{{ form.phone_number.errors }}</p>
+            {% endif %}
           </div>
           <div>
             <label class="block text-base font-medium text-gray-700">{{ form.password1.label }}</label>
-            {{ form.password1 }} {{ form.password1.errors }}
+            {{ form.password1 }}
+            {% if form.password1.errors %}
+              <p class="mt-1 text-sm text-red-600">{{ form.password1.errors }}</p>
+            {% endif %}
           </div>
           <div>
             <label class="block text-base font-medium text-gray-700">{{ form.password2.label }}</label>
-            {{ form.password2 }} {{ form.password2.errors }}
+            {{ form.password2 }}
+            {% if form.password2.errors %}
+              <p class="mt-1 text-sm text-red-600">{{ form.password2.errors }}</p>
+            {% endif %}
           </div>
         </div>
         <!-- Right side -->
         <div class="space-y-6">
           <div>
             <label class="block text-base font-medium text-gray-700">{{ form.company_name.label }}</label>
-            {{ form.company_name }} {{ form.company_name.errors }}
+            {{ form.company_name }}
+            {% if form.company_name.errors %}
+              <p class="mt-1 text-sm text-red-600">{{ form.company_name.errors }}</p>
+            {% endif %}
           </div>
-        
           <div>
             <label class="block text-base font-medium text-gray-700">{{ form.tin_number.label }}</label>
-            {{ form.tin_number }} {{ form.tin_number.errors }}
+            {{ form.tin_number }}
+            {% if form.tin_number.errors %}
+              <p class="mt-1 text-sm text-red-600">{{ form.tin_number.errors }}</p>
+            {% endif %}
           </div>
           <div>
             <label class="block text-base font-medium text-gray-700">{{ form.address.label }}</label>
-            {{ form.address }} {{ form.address.errors }}
+            {{ form.address }}
+            {% if form.address.errors %}
+              <p class="mt-1 text-sm text-red-600">{{ form.address.errors }}</p>
+            {% endif %}
           </div>
           <div>
             <label class="block text-base font-medium text-gray-700">{{ form.city.label }}</label>
-            {{ form.city }} {{ form.city.errors }}
+            {{ form.city }}
+            {% if form.city.errors %}
+              <p class="mt-1 text-sm text-red-600">{{ form.city.errors }}</p>
+            {% endif %}
           </div>
           <div>
             <label class="block text-base font-medium text-gray-700">{{ form.state.label }}</label>
-            {{ form.state }} {{ form.state.errors }}
+            {{ form.state }}
+            {% if form.state.errors %}
+              <p class="mt-1 text-sm text-red-600">{{ form.state.errors }}</p>
+            {% endif %}
           </div>
           <div>
             <label class="block text-base font-medium text-gray-700">{{ form.country.label }}</label>
-            {{ form.country }} {{ form.country.errors }}
+            {{ form.country }}
+            {% if form.country.errors %}
+              <p class="mt-1 text-sm text-red-600">{{ form.country.errors }}</p>
+            {% endif %}
           </div>
           <div>
             <label class="block text-base font-medium text-gray-700">{{ form.preferred_payment_method.label }}</label>
-            {{ form.preferred_payment_method }} {{ form.preferred_payment_method.errors }}
+            {{ form.preferred_payment_method }}
+            {% if form.preferred_payment_method.errors %}
+              <p class="mt-1 text-sm text-red-600">{{ form.preferred_payment_method.errors }}</p>
+            {% endif %}
           </div>
           <div>
             <label class="block text-base font-medium text-gray-700">{{ form.operating_system.label }}</label>
-            {{ form.operating_system }} {{ form.operating_system.errors }}
+            {{ form.operating_system }}
+            {% if form.operating_system.errors %}
+              <p class="mt-1 text-sm text-red-600">{{ form.operating_system.errors }}</p>
+            {% endif %}
           </div>
         </div>
       </div>
-      <!-- Terms -->
-      <div class="flex items-center space-x-2">
-        {{ form.terms }}
-        <label class="text-sm text-gray-700">{{ form.terms.label }}</label>
-        {{ form.terms.errors }}
+      <!-- Terms and Conditions -->
+      <div class="mt-6">
+        <div class="flex items-center space-x-2">
+          {{ form.terms }}
+          <label for="{{ form.terms.id_for_label }}" class="text-sm text-gray-700">
+            I agree to the <a href="#terms-modal" class="text-red-600 hover:text-red-800 font-semibold" onclick="openTermsModal()">Terms and Conditions</a>
+          </label>
+          {% if form.terms.errors %}
+            <p class="mt-1 text-sm text-red-600">{{ form.terms.errors }}</p>
+          {% endif %}
+        </div>
+      </div>
+      <!-- Terms Modal -->
+      <div id="terms-modal" class="fixed inset-0 bg-gray-900 bg-opacity-60 flex items-center justify-center hidden z-50 transition-opacity duration-300">
+        <div class="bg-white rounded-xl shadow-2xl p-8 max-w-3xl w-full m-4 modal-content">
+          <h2 class="text-2xl font-semibold text-gray-900 mb-6">Terms and Conditions</h2>
+          <div class="space-y-4 text-gray-700">
+            <p><strong>1. Fees for Services</strong></p>
+            <p>Fees for the Services are specified in your subscription or order form.</p>
+            <p><strong>2. Payment Terms</strong></p>
+            <p>Payments must be made in accordance with the agreed billing cycle.</p>
+            <p><strong>3. Non-Payment Consequences</strong></p>
+            <p>Failure to pay may result in suspension or termination of Services.</p>
+            <p><strong>4. Additional Terms</strong></p>
+            <p>By signing up, you agree to comply with all applicable laws and regulations, and any additional terms outlined in your subscription agreement.</p>
+          </div>
+          <div class="mt-6 flex justify-end">
+            <button type="button" onclick="closeTermsModal()" class="inline-flex items-center px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors duration-300">
+              Close
+            </button>
+          </div>
+        </div>
       </div>
       <!-- Submit -->
       <div class="mx-auto w-full md:w-1/3">
@@ -134,4 +202,35 @@
     </div>
   </div>
 </div>
+
+<!-- JavaScript for Terms Modal -->
+<script>
+  function openTermsModal() {
+    const modal = document.getElementById('terms-modal');
+    const modalContent = modal.querySelector('.modal-content');
+    modal.classList.remove('hidden');
+    modalContent.style.transform = 'scale(1)';
+    modalContent.style.opacity = '1';
+  }
+
+  function closeTermsModal() {
+    const modal = document.getElementById('terms-modal');
+    const modalContent = modal.querySelector('.modal-content');
+    modalContent.style.transform = 'scale(0.95)';
+    modalContent.style.opacity = '0';
+    setTimeout(() => {
+      modal.classList.add('hidden');
+      modalContent.style.transform = 'scale(0.95)';
+      modalContent.style.opacity = '0';
+    }, 300);
+  }
+</script>
+
+<style>
+  .modal-content {
+    transform: scale(0.95);
+    opacity: 0;
+    transition: transform 0.3s ease, opacity 0.3s ease;
+  }
+</style>
 {% endblock %}

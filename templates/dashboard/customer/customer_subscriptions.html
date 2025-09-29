@@ -1,99 +1,493 @@
 {% extends 'dashboard/common/base.html' %}
+{% load static %}
+
 {% block title %}
 Your Subscriptions
 {% endblock %}
+
 {% block content %}
-<div class="container mx-auto px-4 py-6">
-    <h1 class="text-2xl font-semibold text-gray-800 hidden md:block py-2">Your Subscriptions</h1>
-    <div class="bg-white p-6 rounded-lg shadow-md">
-       
-        {% if messages %}
-        <div class="mb-6 space-y-2">
+<div class="container mx-auto px-4 py-8">
+    <h1 class="text-3xl font-bold text-gray-900 mb-8 md:block hidden">Your Subscriptions</h1>
+
+    {% if messages %}
+        <div class="mb-8 space-y-3">
             {% for message in messages %}
-            <div class="p-4 rounded-lg text-center text-sm
-                {% if message.tags == 'success' %} bg-green-100 text-green-700
-                {% elif message.tags == 'error' %} bg-red-100 text-red-700
-                {% elif message.tags == 'info' %} bg-blue-100 text-blue-700
-                {% else %} bg-gray-100 text-gray-700
-                {% endif %}">
-                {{ message }}
-            </div>
+                <div class="p-4 rounded-lg text-sm font-medium text-center transition-all duration-300
+                    {% if message.tags == 'success' %} bg-green-50 text-green-700 border border-green-200
+                    {% elif message.tags == 'error' %} bg-red-50 text-red-700 border border-red-200
+                    {% elif message.tags == 'info' %} bg-blue-50 text-blue-700 border border-blue-200
+                    {% else %} bg-gray-50 text-gray-700 border border-gray-200
+                    {% endif %}">
+                    {{ message }}
+                </div>
             {% endfor %}
         </div>
-        {% endif %}
+    {% endif %}
+
+    <div class="bg-white rounded-xl shadow-lg p-8 max-w-4xl mx-auto">
+        <p class="text-sm text-gray-600 mb-6">Total Subscriptions: {{ subscription_count }}</p>
+
         <div class="overflow-x-auto">
             {% if subscriptions %}
                 <table class="min-w-full divide-y divide-gray-200">
                     <thead class="bg-gray-50">
                         <tr>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">Plan Name</th>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">vCPU</th>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">RAM (GB)</th>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">OS Storage (GB)</th>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">Data Storage (GB)</th>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">Hourly Price</th>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">Monthly Price</th>
-                           
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">Flavor ID</th>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">Status</th>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">Start Date</th>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">End Date</th>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">Actions</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Plan Name</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Billing Cycle</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Total Price (incl. 15% VAT)</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
                         </tr>
                     </thead>
                     <tbody class="bg-white divide-y divide-gray-200">
-                        {% for subscription in subscriptions %}
-                            <tr class="hover:bg-gray-50">
-                                <td class="px-6 py-4 whitespace-nowrap text-gray-800">{{ subscription.plan.name|default:"N/A" }}</td>
-                                <td class="px-6 py-4 whitespace-nowrap text-gray-800">{{ subscription.plan.vcpu|default:"N/A" }}</td>
-                                <td class="px-6 py-4 whitespace-nowrap text-gray-800">{{ subscription.plan.ram|default:"N/A" }}</td>
-                                <td class="px-6 py-4 whitespace-nowrap text-gray-800">{{ subscription.plan.os_storage|default:"N/A" }}</td>
-                                <td class="px-6 py-4 whitespace-nowrap text-gray-800">{{ subscription.plan.data_storage|default:"N/A" }}</td>
-                                <td class="px-6 py-4 whitespace-nowrap text-gray-800">{{ subscription.plan.price_currency|default:"N/A" }} {{ subscription.plan.hourly_price|default:"N/A" }}</td>
-                                <td class="px-6 py-4 whitespace-nowrap text-gray-800">{{ subscription.plan.price_currency|default:"N/A" }} {{ subscription.plan.monthly_price|default:"N/A" }}</td>
-                               
-                                <td class="px-6 py-4 whitespace-nowrap text-gray-800">{{ subscription.plan.flavor_id|default:"N/A" }}</td>
-                                <td class="px-6 py-4 whitespace-nowrap">
-                                    <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full
-                                        {% if subscription.status == 'active' %} bg-green-100 text-green-800
-                                        {% elif subscription.status == 'pending' %} bg-yellow-100 text-yellow-800
+                        {% for sub_data in subscriptions %}
+                            <tr class="table-row-hover hover:bg-gray-50" data-sub-id="{{ sub_data.subscription.id }}">
+                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-800 font-medium">{{ sub_data.subscription.plan.name|default:"N/A" }}</td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-800 font-medium">{{ sub_data.subscription.billing_cycle|capfirst|default:"N/A" }}</td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-800 font-medium">{{ sub_data.subscription.plan.price_currency|default:"ETB" }} {{ sub_data.total_price|floatformat:2 }}</td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm">
+                                    <span class="status-badge px-2 inline-flex text-xs leading-5 font-semibold rounded-full
+                                        {% if sub_data.subscription.status == 'active' %} bg-green-100 text-green-800
+                                        {% elif sub_data.subscription.status == 'pending' %} bg-yellow-100 text-yellow-800
+                                        {% elif sub_data.subscription.status == 'confirmed' %} bg-blue-100 text-blue-800
                                         {% else %} bg-red-100 text-red-800
                                         {% endif %}">
-                                        {{ subscription.status|capfirst }}
+                                        {{ sub_data.subscription.status|capfirst }}
                                     </span>
                                 </td>
-                                <td class="px-6 py-4 whitespace-nowrap text-gray-800">{{ subscription.start_date|date:"Y-m-d"|default:"N/A" }}</td>
-                                <td class="px-6 py-4 whitespace-nowrap text-gray-800">{{ subscription.end_date|date:"Y-m-d"|default:"N/A" }}</td>
-                                <td class="px-6 py-4 whitespace-nowrap">
-                                    {% if subscription.status == 'pending' %}
-                                        <form method="post" action="{% url 'core:customer_subscriptions' %}" class="inline">
+                                <td class="px-6 py-4 whitespace-nowrap text-sm flex space-x-3 action-buttons">
+                                    <button type="button" class="inline-flex items-center px-3 py-1 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-200 details-button"
+                                        data-sub-id="{{ sub_data.subscription.id|escape }}"
+                                        data-plan-name="{{ sub_data.subscription.plan.name|escape }}"
+                                        data-billing-cycle="{{ sub_data.subscription.billing_cycle|capfirst|escape }}"
+                                        data-total-price="{{ sub_data.subscription.plan.price_currency|escape }} {{ sub_data.total_price|floatformat:2|escape }}"
+                                        data-vcpu="{{ sub_data.subscription.plan.vcpu|escape }}"
+                                        data-ram="{{ sub_data.subscription.plan.ram|escape }}"
+                                        data-os-storage="{{ sub_data.subscription.plan.os_storage|escape }}"
+                                        data-data-storage="{{ sub_data.subscription.plan.data_storage|escape }}"
+                                        data-status="{{ sub_data.subscription.status|capfirst|escape }}"
+                                        data-start-date="{{ sub_data.subscription.start_date|date:'Y-m-d'|escape }}"
+                                        data-end-date="{{ sub_data.subscription.end_date|date:'Y-m-d'|escape }}"
+                                        onclick="openSubscriptionModal(this)">
+                                        <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12h.01M12 12h.01M9 12h.01M12 15h.01M12 9h.01M4 6h16M4 10h16M4 14h16M4 18h16"></path>
+                                        </svg>
+                                        Details
+                                    </button>
+                                    {% if sub_data.subscription.status == 'pending' %}
+                                        <form action="{% url 'core:customer_subscriptions' %}" method="post" class="inline confirm-form" data-sub-id="{{ sub_data.subscription.id }}">
                                             {% csrf_token %}
                                             <input type="hidden" name="action" value="confirm">
-                                            <input type="hidden" name="subscription_id" value="{{ subscription.id }}">
-                                            <button type="submit" class="text-blue-600 hover:underline">Confirm</button>
+                                            <input type="hidden" name="subscription_id" value="{{ sub_data.subscription.id }}">
+                                            <button type="submit" class="inline-flex items-center px-3 py-1 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors duration-200 confirm-button">
+                                                <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                                                </svg>
+                                                Confirm
+                                            </button>
                                         </form>
-                                        <form method="post" action="{% url 'core:customer_subscriptions' %}" class="inline">
+                                        <form action="{% url 'core:customer_subscriptions' %}" method="post" class="inline cancel-form" data-sub-id="{{ sub_data.subscription.id }}">
                                             {% csrf_token %}
                                             <input type="hidden" name="action" value="cancel">
-                                            <input type="hidden" name="subscription_id" value="{{ subscription.id }}">
-                                            <button type="submit" class="text-red-600 hover:underline ml-2">Cancel</button>
+                                            <input type="hidden" name="subscription_id" value="{{ sub_data.subscription.id }}">
+                                            <button type="submit" class="inline-flex items-center px-3 py-1 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors duration-200 cancel-button">
+                                                <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                                                </svg>
+                                                Cancel
+                                            </button>
                                         </form>
                                     {% endif %}
                                 </td>
                             </tr>
+                            <!-- Debug row -->
+                            <tr class="debug-row" style="display: none;">
+                                <td colspan="5">Debug: Subscription {{ sub_data.subscription.id }} status: {{ sub_data.subscription.status }}</td>
+                            </tr>
                         {% empty %}
                             <tr>
-                                <td colspan="13" class="px-6 py-4 text-center text-gray-500">
+                                <td colspan="5" class="px-6 py-4 text-center text-sm text-gray-500 font-medium">
                                     No subscriptions found.
                                 </td>
                             </tr>
                         {% endfor %}
                     </tbody>
                 </table>
+                {% if subscriptions.has_other_pages %}
+                    <div class="mt-6">
+                        <nav class="flex justify-center">
+                            <ul class="inline-flex items-center -space-x-px text-sm">
+                                {% if subscriptions.has_previous %}
+                                    <li>
+                                        <a href="?page={{ subscriptions.previous_page_number }}" class="px-3 py-2 ml-0 leading-tight text-gray-500 bg-white border border-gray-300 rounded-l-lg hover:bg-gray-100 hover:text-gray-700 transition duration-200">Previous</a>
+                                    </li>
+                                {% endif %}
+                                {% for num in subscriptions.paginator.page_range %}
+                                    <li>
+                                        <a href="?page={{ num }}" class="px-3 py-2 {% if subscriptions.number == num %}text-white bg-blue-600 border-blue-600{% else %}text-gray-500 bg-white border-gray-300 hover:bg-gray-100 hover:text-gray-700{% endif %} border transition duration-200">{{ num }}</a>
+                                    </li>
+                                {% endfor %}
+                                {% if subscriptions.has_next %}
+                                    <li>
+                                        <a href="?page={{ subscriptions.next_page_number }}" class="px-3 py-2 leading-tight text-gray-500 bg-white border border-gray-300 rounded-r-lg hover:bg-gray-100 hover:text-gray-700 transition duration-200">Next</a>
+                                    </li>
+                                {% endif %}
+                            </ul>
+                        </nav>
+                    </div>
+                {% endif %}
             {% else %}
-                <p class="text-gray-600 p-4">No subscriptions found.</p>
+                <p class="text-gray-600 text-center py-4 font-medium">No subscriptions found.</p>
             {% endif %}
         </div>
     </div>
+
+    <!-- Modal Structure -->
+    <div id="subscriptionModal" class="fixed inset-0 bg-gray-900 bg-opacity-60 flex items-center justify-center hidden z-50 transition-opacity duration-300">
+        <div class="bg-white rounded-xl shadow-2xl p-8 max-w-3xl w-full m-4 modal-content">
+            <h2 class="text-2xl font-semibold text-gray-900 mb-6">Subscription Details</h2>
+            <div id="modalContent" class="grid grid-cols-1 md:grid-cols-2 gap-6 fade-in">
+                <div class="space-y-4">
+                    <div class="flex items-center p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors duration-200">
+                        <svg class="w-5 h-5 mr-2 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                        </svg>
+                        <span class="w-1/3 text-sm font-medium text-gray-600">Plan Name</span>
+                        <span id="modalPlanName" class="text-gray-900"></span>
+                    </div>
+                    <div class="flex items-center p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors duration-200">
+                        <svg class="w-5 h-5 mr-2 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.686 1M12 8c-1.11 0-2.08.402-2.686 1M3 3h18M3 21h18"></path>
+                        </svg>
+                        <span class="w-1/3 text-sm font-medium text-gray-600">Billing Cycle</span>
+                        <span id="modalBillingCycle" class="text-gray-900"></span>
+                    </div>
+                    <div class="flex items-center p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors duration-200">
+                        <svg class="w-5 h-5 mr-2 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.686 1M12 8c-1.11 0-2.08.402-2.686 1M3 3h18M3 21h18"></path>
+                        </svg>
+                        <span class="w-1/3 text-sm font-medium text-gray-600">Total Price (incl. 15% VAT)</span>
+                        <span id="modalTotalPrice" class="text-gray-900"></span>
+                    </div>
+                    <div class="flex items-center p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors duration-200">
+                        <svg class="w-5 h-5 mr-2 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 12h14M12 5v14"></path>
+                        </svg>
+                        <span class="w-1/3 text-sm font-medium text-gray-600">vCPUs</span>
+                        <span id="modalVCPUs" class="text-gray-900"></span>
+                    </div>
+                    <div class="flex items-center p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors duration-200">
+                        <svg class="w-5 h-5 mr-2 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4"></path>
+                        </svg>
+                        <span class="w-1/3 text-sm font-medium text-gray-600">RAM (GB)</span>
+                        <span id="modalRAM" class="text-gray-900"></span>
+                    </div>
+                </div>
+                <div class="space-y-4">
+                    <div class="flex items-center p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors duration-200">
+                        <svg class="w-5 h-5 mr-2 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z"></path>
+                        </svg>
+                        <span class="w-1/3 text-sm font-medium text-gray-600">OS Storage (GB)</span>
+                        <span id="modalOSStorage" class="text-gray-900"></span>
+                    </div>
+                    <div class="flex items-center p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors duration-200">
+                        <svg class="w-5 h-5 mr-2 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4m0 5c0 2.21-3.582 4-8 4s-8-1.79-8-4"></path>
+                        </svg>
+                        <span class="w-1/3 text-sm font-medium text-gray-600">Data Storage (GB)</span>
+                        <span id="modalDataStorage" class="text-gray-900"></span>
+                    </div>
+                    <div class="flex items-center p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors duration-200">
+                        <svg class="w-5 h-5 mr-2 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                        </svg>
+                        <span class="w-1/3 text-sm font-medium text-gray-600">Status</span>
+                        <span id="modalStatus" class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full"></span>
+                    </div>
+                    <div class="flex items-center p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors duration-200">
+                        <svg class="w-5 h-5 mr-2 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+                        </svg>
+                        <span class="w-1/3 text-sm font-medium text-gray-600">Start Date</span>
+                        <span id="modalStartDate" class="text-gray-900"></span>
+                    </div>
+                    <div class="flex items-center p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors duration-200">
+                        <svg class="w-5 h-5 mr-2 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+                        </svg>
+                        <span class="w-1/3 text-sm font-medium text-gray-600">End Date</span>
+                        <span id="modalEndDate" class="text-gray-900"></span>
+                    </div>
+                </div>
+            </div>
+            <div class="mt-6 flex justify-end">
+                <button type="button" onclick="closeSubscriptionModal()" class="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-200">
+                    <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                    </svg>
+                    Close
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- JavaScript for Modal and Form Submission -->
+   <!-- JavaScript for Modal and Form Submission -->
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        console.log('[DEBUG] Subscriptions page loaded');
+
+        // Open modal with subscription details
+        window.openSubscriptionModal = function (button) {
+            console.log('[DEBUG] Opening modal for subscription:', button.dataset.subId);
+            const modal = document.getElementById('subscriptionModal');
+            const modalContent = document.querySelector('.modal-content');
+
+            if (!modal || !modalContent) {
+                console.error('[ERROR] Modal or modal content not found');
+                alert('Failed to open subscription details: Modal not found.');
+                return;
+            }
+
+            const data = {
+                id: button.dataset.subId,
+                planName: button.dataset.planName,
+                billingCycle: button.dataset.billingCycle,
+                totalPrice: button.dataset.totalPrice,
+                vcpus: button.dataset.vcpu,
+                ram: button.dataset.ram,
+                osStorage: button.dataset.osStorage,
+                dataStorage: button.dataset.dataStorage,
+                status: button.dataset.status,
+                startDate: button.dataset.startDate,
+                endDate: button.dataset.endDate
+            };
+
+            console.log('[DEBUG] Modal data:', data);
+
+            try {
+                document.getElementById('modalPlanName').textContent = data.planName || 'N/A';
+                document.getElementById('modalBillingCycle').textContent = data.billingCycle || 'N/A';
+                document.getElementById('modalTotalPrice').textContent = data.totalPrice || 'N/A';
+                document.getElementById('modalVCPUs').textContent = data.vcpus || 'N/A';
+                document.getElementById('modalRAM').textContent = data.ram || 'N/A';
+                document.getElementById('modalOSStorage').textContent = data.osStorage || 'N/A';
+                document.getElementById('modalDataStorage').textContent = data.dataStorage || 'N/A';
+                document.getElementById('modalStatus').textContent = data.status || 'N/A';
+                document.getElementById('modalStartDate').textContent = data.startDate || 'N/A';
+                document.getElementById('modalEndDate').textContent = data.endDate || 'N/A';
+
+                const statusElement = document.getElementById('modalStatus');
+                statusElement.className = 'px-2 inline-flex text-xs leading-5 font-semibold rounded-full';
+                if (data.status && data.status.toLowerCase() === 'active') {
+                    statusElement.classList.add('bg-green-100', 'text-green-800');
+                } else if (data.status && data.status.toLowerCase() === 'pending') {
+                    statusElement.classList.add('bg-yellow-100', 'text-yellow-800');
+                } else if (data.status && data.status.toLowerCase() === 'confirmed') {
+                    statusElement.classList.add('bg-blue-100', 'text-blue-800');
+                } else {
+                    statusElement.classList.add('bg-red-100', 'text-red-800');
+                }
+
+                modal.classList.remove('hidden');
+                modalContent.style.transform = 'scale(1)';
+                modalContent.style.opacity = '1';
+            } catch (error) {
+                console.error('[ERROR] Failed to open modal:', error);
+                alert('Failed to open subscription details: ' + error.message);
+            }
+        };
+
+        // Close modal
+        window.closeSubscriptionModal = function () {
+            console.log('[DEBUG] Closing modal');
+            const modal = document.getElementById('subscriptionModal');
+            const modalContent = document.querySelector('.modal-content');
+
+            if (!modal || !modalContent) {
+                console.error('[ERROR] Modal or modal content not found');
+                alert('Failed to close modal: Modal not found.');
+                return;
+            }
+
+            try {
+                modalContent.style.transform = 'scale(0.95)';
+                modalContent.style.opacity = '0';
+                setTimeout(() => {
+                    modal.classList.add('hidden');
+                    modalContent.style.transform = 'scale(0.95)';
+                    modalContent.style.opacity = '0';
+                }, 300);
+            } catch (error) {
+                console.error('[ERROR] Failed to close modal:', error);
+                alert('Failed to close modal: ' + error.message);
+            }
+        };
+
+        // Handle form submission with AJAX
+        document.querySelectorAll('.confirm-form, .cancel-form').forEach(form => {
+            form.addEventListener('submit', function (event) {
+                event.preventDefault();
+                const subId = this.dataset.subId;
+                const action = this.querySelector('input[name="action"]').value;
+                const button = this.querySelector('button[type="submit"]');
+                const originalButtonText = button.textContent;
+
+                console.log(`[DEBUG] Submitting ${action} for subscription:`, subId);
+                console.log('[DEBUG] Form action URL:', this.action);
+
+                button.disabled = true;
+                button.textContent = action === 'confirm' ? 'Confirming...' : 'Cancelling...';
+
+                const formData = new FormData(this);
+                // Hardcode the correct URL to avoid [object HTMLInputElement]
+                const url = "{% url 'core:customer_subscriptions' %}";
+                console.log('[DEBUG] Fetching URL:', url);
+
+                fetch(url, {
+                    method: 'POST',
+                    body: formData,
+                    headers: {
+                        'X-CSRFToken': formData.get('csrfmiddlewaretoken'),
+                        'X-Requested-With': 'XMLHttpRequest'
+                    }
+                })
+                .then(response => {
+                    console.log('[DEBUG] Response status:', response.status);
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! Status: ${response.status}`);
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    console.log('[DEBUG] Response data:', data);
+                    if (data.success) {
+                        const row = document.querySelector(`tr[data-sub-id="${subId}"]`);
+                        if (row) {
+                            if (action === 'confirm') {
+                                // Update status badge
+                                const statusBadge = row.querySelector('.status-badge');
+                                if (statusBadge) {
+                                    statusBadge.textContent = 'Confirmed';
+                                    statusBadge.className = 'status-badge px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-blue-100 text-blue-800';
+                                }
+
+                                // Update modal data attribute
+                                const detailsButton = row.querySelector('.details-button');
+                                if (detailsButton) {
+                                    detailsButton.dataset.status = 'Confirmed';
+                                }
+
+                                // Remove Confirm and Cancel buttons
+                                const actionCell = row.querySelector('.action-buttons');
+                                actionCell.innerHTML = `
+                                    <button type="button" class="inline-flex items-center px-3 py-1 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-200 details-button"
+                                        data-sub-id="${subId}"
+                                        data-plan-name="${detailsButton.dataset.planName}"
+                                        data-billing-cycle="${detailsButton.dataset.billingCycle}"
+                                        data-total-price="${detailsButton.dataset.totalPrice}"
+                                        data-vcpu="${detailsButton.dataset.vcpu}"
+                                        data-ram="${detailsButton.dataset.ram}"
+                                        data-os-storage="${detailsButton.dataset.osStorage}"
+                                        data-data-storage="${detailsButton.dataset.dataStorage}"
+                                        data-status="Confirmed"
+                                        data-start-date="${detailsButton.dataset.startDate}"
+                                        data-end-date="${detailsButton.dataset.endDate}"
+                                        onclick="openSubscriptionModal(this)">
+                                        <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12h.01M12 12h.01M9 12h.01M12 15h.01M12 9h.01M4 6h16M4 10h16M4 14h16M4 18h16"></path>
+                                        </svg>
+                                        Details
+                                    </button>
+                                `;
+
+                                // Show success message
+                                const messageDiv = document.createElement('div');
+                                messageDiv.className = 'p-4 rounded-lg text-sm font-medium text-center bg-green-50 text-green-700 border border-green-200 mt-4';
+                                messageDiv.textContent = data.message || 'Subscription confirmed successfully!';
+                                const container = document.querySelector('.container');
+                                if (container) {
+                                    console.log('[DEBUG] Appending message to .container');
+                                    container.prepend(messageDiv); // Append as first child
+                                    setTimeout(() => {
+                                        console.log('[DEBUG] Removing message after 5 seconds');
+                                        messageDiv.remove();
+                                    }, 5000);
+                                } else {
+                                    console.error('[ERROR] .container not found for message display');
+                                    alert('Subscription confirmed, but failed to display message.');
+                                }
+
+                                console.log(`[DEBUG] Subscription ${subId} confirmed. Status updated to 'confirmed'. Buttons removed.`);
+                            } else if (action === 'cancel') {
+                                // Remove the row
+                                row.remove();
+                                console.log(`[DEBUG] Subscription ${subId} cancelled. Row removed.`);
+
+                                // Show success message
+                                const messageDiv = document.createElement('div');
+                                messageDiv.className = 'p-4 rounded-lg text-sm font-medium text-center bg-green-50 text-green-700 border border-green-200 mt-4';
+                                messageDiv.textContent = data.message || 'Subscription cancelled successfully!';
+                                const container = document.querySelector('.container');
+                                if (container) {
+                                    console.log('[DEBUG] Appending cancel message to .container');
+                                    container.prepend(messageDiv);
+                                    setTimeout(() => {
+                                        console.log('[DEBUG] Removing cancel message after 5 seconds');
+                                        messageDiv.remove();
+                                    }, 5000);
+                                } else {
+                                    console.error('[ERROR] .container not found for cancel message display');
+                                    alert('Subscription cancelled, but failed to display message.');
+                                }
+                            }
+                        } else {
+                            console.error('[ERROR] Row not found for subscription:', subId);
+                            alert('Action completed, but UI update failed. Please refresh the page.');
+                        }
+                    } else {
+                        console.error('[ERROR] Action failed:', data.error);
+                        alert(`Failed to ${action} subscription: ${data.error}`);
+                        button.disabled = false;
+                        button.textContent = originalButtonText;
+                    }
+                })
+                .catch(error => {
+                    console.error(`[ERROR] Failed to ${action} subscription:`, error);
+                    alert(`Failed to ${action} subscription: ${error.message}`);
+                    button.disabled = false;
+                    button.textContent = originalButtonText;
+                });
+            });
+        });
+
+        // Debug: Log initial state
+        document.querySelectorAll('tr[data-sub-id]').forEach(row => {
+            const subId = row.dataset.subId;
+            const statusBadge = row.querySelector('.status-badge');
+            const confirmButton = row.querySelector('.confirm-button');
+            console.log(`[DEBUG] Subscription ${subId} - Status: ${statusBadge ? statusBadge.textContent : 'N/A'}, Confirm button present: ${!!confirmButton}`);
+        });
+    });
+</script>
+
+    <style>
+        .fade-in {
+            animation: fadeIn 0.5s ease-in;
+        }
+
+        @keyframes fadeIn {
+            0% { opacity: 0; transform: translateY(10px); }
+            100% { opacity: 1; transform: translateY(0); }
+        }
+
+        .modal-content {
+            transform: scale(0.95);
+            opacity: 0;
+            transition: transform 0.3s ease, opacity 0.3s ease;
+        }
+    </style>
 </div>
 {% endblock %}

@@ -10,15 +10,15 @@ def generate_invoice_number():
     The sequential number increments daily, starting from 1.
     """
     today = timezone.now().date()
-    date_str = today.strftime('%m%d%Y')  # Format as MMDDYYYY, e.g., 09252025
+    date_str = today.strftime('%m%d%Y')
     prefix = 'INV-'
     suffix = f'-{date_str}'
     
-    max_retries = 5
+    max_retries = 50  # retries to handle high concurrency
     for attempt in range(max_retries):
         try:
             with transaction.atomic():
-                # Lock invoices for today to prevent concurrent updates
+                # Lock invoices for the current date to prevent concurrent updates
                 last_invoice = Invoice.objects.filter(
                     invoice_number__startswith=prefix,
                     invoice_number__endswith=suffix
@@ -34,14 +34,16 @@ def generate_invoice_number():
                 
                 invoice_number = f'{prefix}{seq_number}{suffix}'
                 
-                # Verify uniqueness before returning
+                # Double-check uniqueness
                 if not Invoice.objects.filter(invoice_number=invoice_number).exists():
                     return invoice_number
         except IntegrityError:
             if attempt == max_retries - 1:
-                raise ValueError("Unable to generate unique invoice number after retries.")
+                # Fallback to UUID-based invoice number to avoid failure
+                return f'INV-{uuid.uuid4().hex[:8].upper()}-{date_str}'
             continue  # Retry on IntegrityError
-    raise ValueError("Unable to generate unique invoice number after retries.")
+    # Fallback to UUID if retries fail
+    return f'INV-{uuid.uuid4().hex[:8].upper()}-{date_str}'
 
 class ContactMessage(models.Model):
     name = models.CharField(max_length=150)
@@ -66,7 +68,10 @@ class Invoice(models.Model):
     due_date = models.DateTimeField()
     status = models.CharField(
         max_length=20,
-        choices=[('pending', 'Pending'), ('paid', 'Paid'), ('overdue', 'Overdue')],
+        choices=[('pending', 'Pending'), 
+                ('confirmed', 'Confirmed'),
+                 ('paid', 'Paid'), 
+                 ('overdue', 'Overdue')],
         default='pending'
     )
     created_at = models.DateTimeField(auto_now_add=True)
@@ -91,11 +96,12 @@ class Payment(models.Model):
         max_length=50,
         choices=[('bank_transfer', 'Bank Transfer'), ('telebirr', 'Telebirr')]
     )
-    transaction_id = models.CharField(max_length=100, blank=True)
+    transaction_id = models.CharField(max_length=100, blank=True, null=True)  
     reference_number = models.CharField(max_length=100, blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
+
     def __str__(self):
-        return f"Payment {self.transaction_id} for Invoice {self.invoice.invoice_number}"
+        return f"Payment {self.transaction_id or 'N/A'} for Invoice {self.invoice.invoice_number}"
 class Ticket(models.Model):
     project = models.ForeignKey(Project, on_delete=models.CASCADE, related_name="tickets")
     subject = models.CharField(max_length=255)
@@ -233,12 +239,26 @@ class SubscriptionPlan(models.Model):
     data_storage = models.IntegerField(default=50)
     hourly_price = models.DecimalField(max_digits=12, decimal_places=2)
     monthly_price = models.DecimalField(max_digits=12, decimal_places=2)
+    quarterly_price = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True)
+    semi_annual_price = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True)
+    yearly_price = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True)
     price_currency = models.CharField(max_length=10, default='ETB')
     flavor_id = models.CharField(max_length=100, unique=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+
     def __str__(self):
         return self.name
+
+    def get_price_for_billing_cycle(self, billing_cycle):
+        """Return the price for the specified billing cycle."""
+        price_map = {
+            'monthly': self.monthly_price,
+            'quarterly': self.quarterly_price or self.monthly_price * Decimal('3'),
+            'semi-annual': self.semi_annual_price or self.monthly_price * Decimal('6'),
+            'yearly': self.yearly_price or self.monthly_price * Decimal('12'),
+        }
+        return price_map.get(billing_cycle, self.monthly_price)
 class Cart(models.Model):
     session_id = models.CharField(max_length=255, unique=True, blank=True, null=True)
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True)
@@ -260,8 +280,10 @@ class CartItem(models.Model):
     )
     quantity = models.PositiveIntegerField(default=1)
     price = models.DecimalField(max_digits=12, decimal_places=2)
+
     def subtotal(self):
         return self.price * self.quantity
+
     def __str__(self):
         return f"{self.quantity} x {self.plan.name} ({self.billing_cycle})"
 class Customer(models.Model):
@@ -306,14 +328,26 @@ class Customer(models.Model):
 class Subscription(models.Model):
     customer = models.ForeignKey(Customer, on_delete=models.CASCADE)
     plan = models.ForeignKey(SubscriptionPlan, on_delete=models.CASCADE)
+    billing_cycle = models.CharField(
+        max_length=50,
+        choices=[("monthly", "Monthly"), ("quarterly", "Quarterly"), ("semi-annual", "Semi-Annual"), ("yearly", "Yearly")],
+        default="monthly"
+    )
     start_date = models.DateTimeField(auto_now_add=True)
     end_date = models.DateTimeField(null=True, blank=True)
     status = models.CharField(
         max_length=20,
-        choices=[('pending', 'Pending'), ('active', 'Active'), ('cancelled', 'Cancelled'), ('expired', 'Expired')],
+        choices=[
+            ('pending', 'Pending'),
+            ('confirmed', 'Confirmed'), 
+            ('active', 'Active'),
+            ('cancelled', 'Cancelled'),
+            ('expired', 'Expired')
+        ],
         default='pending'
     )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+
     def __str__(self):
-        return f"{self.plan.name} for {self.customer}"
+        return f"{self.plan.name} ({self.billing_cycle}) for {self.customer}"

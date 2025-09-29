@@ -44,6 +44,9 @@ TEMPLATES = [
                 'django.contrib.messages.context_processors.messages',
                 'django.template.context_processors.i18n',
             ],
+            'libraries': {
+                'core_tags': 'core.templatetags.core_tags',
+            },
         },
     },
 ]
@@ -53,7 +56,7 @@ WSGI_APPLICATION = 'Ocloud_billing.wsgi.application'
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.mysql',
-        'NAME': 'otech_db1',
+        'NAME': 'otech_db2',
         'USER': 'root',
         'PASSWORD': '',
         'HOST': 'localhost',
@@ -100,7 +103,7 @@ EMAIL_HOST_PASSWORD = 'exkeioblmqgbhste'
 DEFAULT_FROM_EMAIL = 'OTECH Cloud <stemesgent@gmail.com>'
 EMAIL_TIMEOUT = 10
 SITE_DOMAIN = 'http://localhost:8000'
-SITE_NAME = 'OTECH Cloud'
+SITE_NAME = 'OTech Cloud'
 
 CELERY_BROKER_URL = 'redis://localhost:6379/0'
 CELERY_RESULT_BACKEND = 'redis://localhost:6379/1'
