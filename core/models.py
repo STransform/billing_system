@@ -247,8 +247,21 @@ class SubscriptionPlan(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
+    # Mapping of flavor names to display names
+    DISPLAY_NAME_MAP = {
+        'm1.small': 'Starter',
+        'm1.medium': 'Premium',
+        'm1.large': 'Plus',
+        'm1.xlarge': 'Enterprise',
+    }
+
+    @property
+    def display_name(self):
+        """Return the custom display name for the flavor."""
+        return self.DISPLAY_NAME_MAP.get(self.name, self.name)
+
     def __str__(self):
-        return self.name
+        return self.display_name
 
     def get_price_for_billing_cycle(self, billing_cycle):
         """Return the price for the specified billing cycle."""

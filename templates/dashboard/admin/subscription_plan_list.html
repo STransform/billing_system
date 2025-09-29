@@ -89,7 +89,7 @@
                                 <!-- Iterate over subscription plans in the context -->
                                 <tr class="table-row-hover hover:bg-gray-50">
                                     <!-- Table row with hover effect for better interactivity -->
-                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-800 font-medium">{{ plan.name|default:"N/A" }}</td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-800 font-medium">{{ plan.display_name|default:"N/A" }}</td>
                                     <!-- Display plan name or "N/A" if not provided -->
                                     <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-800 font-medium">{{ plan.vcpu|default:"N/A" }}</td>
                                     <!-- Display number of vCPUs or "N/A" if not provided -->

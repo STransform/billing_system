@@ -56,7 +56,7 @@ WSGI_APPLICATION = 'Ocloud_billing.wsgi.application'
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.mysql',
-        'NAME': 'otech_db2',
+        'NAME': 'otech_db3',
         'USER': 'root',
         'PASSWORD': '',
         'HOST': 'localhost',

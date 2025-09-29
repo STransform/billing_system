@@ -88,7 +88,7 @@
       {% for f in flavors %}
       <div class="bg-white rounded-xl shadow p-8 hover:shadow-xl transition border-2 border-red-600">
         <i class="fas fa-cubes text-4xl text-red-600 mb-4"></i>
-        <h3 class="text-xl font-semibold mb-4">{{ f.name }}</h3>
+        <h3 class="text-xl font-semibold mb-4">{{ f.display_name }}</h3>
         <p class="text-4xl font-bold mb-6">
           <span class="price-display" 
                 data-monthly="{{ f.monthly_price_display|floatformat:2 }}" 

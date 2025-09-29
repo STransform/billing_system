@@ -67,19 +67,19 @@ def sync_subscription_plans(request=None):
             SubscriptionPlan.objects.update_or_create(
                 flavor_id=flavor.id,  # Use flavor ID as unique identifier
                 defaults={
-                    'name': flavor.name,  # Flavor name from OpenStack
-                    'vcpu': flavor.vcpus,  # Number of virtual CPUs
-                    'ram': flavor.ram // 1024,  # Convert RAM from MB to GB
-                    'os_storage': flavor.disk,  # Disk size in GB
-                    'data_storage': 50,  # Default data storage (hardcoded to 50 GB)
-                    'hourly_price': hourly_price,  # Calculated hourly price
-                    'monthly_price': monthly_price,  # Calculated monthly price
-                    'quarterly_price': monthly_price * Decimal('3'),  # Quarterly price (3 months)
-                    'semi_annual_price': monthly_price * Decimal('6'),  # Semi-annual price (6 months)
-                    'yearly_price': monthly_price * Decimal('12'),  # Yearly price (12 months)
-                    'price_currency': 'ETB',  # Currency set to Ethiopian Birr
-                    'created_at': timezone.now(),  # Set creation timestamp
-                    'updated_at': timezone.now(),  # Set update timestamp
+                    'name': flavor.name,  
+                    'vcpu': flavor.vcpus, 
+                    'ram': flavor.ram // 1024, 
+                    'os_storage': flavor.disk,  
+                    'data_storage': 50,  
+                    'hourly_price': hourly_price,  
+                    'monthly_price': monthly_price, 
+                    'quarterly_price': monthly_price * Decimal('3'),  
+                    'semi_annual_price': monthly_price * Decimal('6'), 
+                    'yearly_price': monthly_price * Decimal('12'),  
+                    'price_currency': 'ETB',  
+                    'created_at': timezone.now(), 
+                    'updated_at': timezone.now(),  
                 }
             )
         

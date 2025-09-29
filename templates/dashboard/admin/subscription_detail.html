@@ -5,7 +5,7 @@
 <!-- Load the static template tag to enable access to static files (e.g., CSS, JS, images) -->
 
 {% block title %}
-    Subscription Details - {{ subscription.plan.name|default:"Unnamed Plan" }}
+    Subscription Details - {{ subscription.plan.display_name|default:"Unnamed Plan" }}
     <!-- Define the page title block, displaying the subscription plan name or "Unnamed Plan" if not provided -->
 {% endblock %}
 
@@ -23,7 +23,7 @@
             <!-- Link to the subscription list page with hover color transition -->
             <span class="text-gray-400">/</span>
             <!-- Separator for breadcrumbs -->
-            <span class="text-gray-800">{{ subscription.plan.name|default:"Unnamed Plan" }}</span>
+            <span class="text-gray-800">{{ subscription.plan.display_name|default:"Unnamed Plan" }}</span>
             <!-- Display the subscription plan name or fallback to "Unnamed Plan" -->
         </nav>
 
@@ -59,7 +59,7 @@
             <!-- Card with white background, rounded corners, shadow, padding, and fade-in animation -->
             <div class="flex justify-between items-center mb-6">
                 <!-- Header section with flexbox for alignment -->
-                <h2 class="text-2xl font-semibold text-gray-900">Subscription: {{ subscription.plan.name|default:"N/A" }}</h2>
+                <h2 class="text-2xl font-semibold text-gray-900">Subscription: {{ subscription.plan.display_name|default:"N/A" }}</h2>
                 <!-- Subheading displaying the subscription plan name or "N/A" -->
             </div>
 
@@ -94,7 +94,7 @@
                         </svg>
                         <!-- SVG icon for plan name -->
                         <span class="w-1/3 text-sm font-medium text-gray-600">Plan Name</span>
-                        <span class="text-gray-900">{{ subscription.plan.name|default:"N/A" }}</span>
+                        <span class="text-gray-900">{{ subscription.plan.display_name|default:"N/A" }}</span>
                         <!-- Display subscription plan name or "N/A" if not provided -->
                     </div>
                     <div class="flex items-center p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors duration-200">
