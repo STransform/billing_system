@@ -1,6 +1,6 @@
 from django import forms
 from django.core.exceptions import ValidationError
-from .models import ContactMessage, FlavorPrice, VolumePrice, IpPrice, RouterPrice, SnapShotPrice, ImagePrice, Customer
+from .models import ContactMessage, FlavorPrice, Invoice, VolumePrice, IpPrice, RouterPrice, SnapShotPrice, ImagePrice, Customer
 
 class ContactForm(forms.ModelForm):
     class Meta:
@@ -49,6 +49,22 @@ class CustomerForm(forms.ModelForm):
         if not name or not name.strip():
             raise ValidationError("Name cannot be empty.")
         return name
+
+class PaymentForm(forms.Form):
+    invoice = forms.ModelChoiceField(queryset=Invoice.objects.all(), widget=forms.HiddenInput())
+    amount = forms.DecimalField(max_digits=10, decimal_places=2, min_value=0.01)
+    payment_method = forms.ChoiceField(choices=[('bank_transfer', 'Bank Transfer'), ('telebirr', 'Telebirr')])
+    reference_number = forms.CharField(max_length=100, required=False)
+
+    def clean(self):
+        cleaned_data = super().clean()
+        payment_method = cleaned_data.get('payment_method')
+        reference_number = cleaned_data.get('reference_number')
+
+        if payment_method == 'telebirr' and not reference_number:
+            self.add_error('reference_number', 'Reference number is required for Telebirr payments.')
+        return cleaned_data
+
 
 class FlavorPriceForm(forms.ModelForm):
     class Meta:
