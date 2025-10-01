@@ -222,8 +222,11 @@ document.addEventListener('DOMContentLoaded', function() {
             const cycleDisplay = this.closest('.bg-white').querySelector('.cycle-display');
             const selectedCycle = this.value;
             const cycleText = this.options[this.selectedIndex].dataset.cycle;
-            const price = priceDisplay.dataset[selectedCycle.replace('-', '_')];
-            priceDisplay.textContent = parseFloat(price).toFixed(2);
+            const priceKey = selectedCycle.replace('-', '_');
+            const price = priceDisplay.dataset[priceKey];
+            // Fallback to 0.00 if price is invalid
+            const displayPrice = isNaN(parseFloat(price)) ? '0.00' : parseFloat(price).toFixed(2);
+            priceDisplay.textContent = displayPrice;
             cycleDisplay.textContent = cycleText;
         });
     });
