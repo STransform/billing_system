@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Invoice {{ invoice.invoice_number }}</title>
+    <style>
+        body { font-family: Arial, sans-serif; font-size: 12px; color: #333; margin: 20px; }
+        .invoice-container { max-width: 800px; margin: 0 auto; }
+        .header { display: flex; justify-content: space-between; border-bottom: 2px solid #333; padding-bottom: 10px; }
+        .header img { max-height: 50px; }
+        .header-right { text-align: right; }
+        .details { display: flex; justify-content: space-between; margin: 20px 0; }
+        .details div { width: 45%; }
+        table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
+        th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+        th { background-color: #f4f4f4; font-weight: bold; }
+        .summary { text-align: right; }
+        .summary p { margin: 5px 0; }
+        .status-paid { color: #28a745; }
+        .status-confirmed { color: #007bff; }
+        .status-overdue { color: #dc3545; }
+        .status-pending { color: #ffc107; }
+    </style>
+</head>
+<body>
+    <div class="invoice-container">
+        <!-- Header -->
+        <div class="header">
+            <div>
+                <h1>Invoice {{ invoice.invoice_number }}</h1>
+                <p>Issued on: {{ invoice.issue_date|date:"M d, Y" }}</p>
+                <p>Due by: {{ invoice.due_date|date:"M d, Y" }}</p>
+            </div>
+            <div class="header-right">
+                <img src="{{ logo_url }}" alt="Company Logo">
+                <p>OTech Engineering</p>
+                <p>Ayer tena, Addis Ababa</p>
+                <p>Email: OEST@otech.et</p>
+            </div>
+        </div>
+
+        <!-- Customer and Invoice Details -->
+        <div class="details">
+            <div>
+                <h2>Billed To</h2>
+                <p>Customer name: {{ invoice.customer.name|default:invoice.customer.user.email }}</p>
+                <p>Company name:{{ invoice.customer.company|default:"N/A" }}</p>
+                <p>Address:{{ invoice.customer.address|default:"N/A" }}</p>
+                <p>Sate:{{ invoice.customer.city|default:"N/A" }}, {{ invoice.customer.state|default:"N/A" }}, {{ invoice.customer.country|default:"N/A" }}</p>
+                <p>TIN: {{ invoice.customer.tin_number|default:"N/A" }}</p>
+            </div>
+            <div class="header-right">
+                <h2>Invoice Details</h2>
+                <p>Status: <span class="status-{{ invoice.status }}">{{ invoice.status|title }}</span></p>
+                <p>Invoice Number: {{ invoice.invoice_number }}</p>
+                <p>Issue Date: {{ invoice.issue_date|date:"M d, Y" }}</p>
+                <p>Due Date: {{ invoice.due_date|date:"M d, Y" }}</p>
+            </div>
+        </div>
+
+        <!-- Subscription Items -->
+        <h2>Subscription Details</h2>
+        <table>
+            <thead>
+                <tr>
+                    <th>Plan</th>
+                    <th>Billing Cycle</th>
+                    <th>Price</th>
+                    <th>Tax (15%)</th>
+                    <th>Total</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% if invoice.subscription %}
+                    <tr>
+                        <td>{{ invoice.subscription.plan.display_name }}</td>
+                        <td>{{ invoice.subscription.billing_cycle|title }}</td>
+                        <td>{{ invoice.amount }} {{ invoice.subtotal_currency }}</td>
+                        <td>{{ invoice.tax }} {{ invoice.tax_currency }}</td>
+                        <td>{{ invoice.total }} {{ invoice.total_currency }}</td>
+                    </tr>
+                {% else %}
+                    <tr>
+                        <td colspan="5">No subscription linked to this invoice.</td>
+                    </tr>
+                {% endif %}
+            </tbody>
+        </table>
+
+        <!-- Summary -->
+        <div class="summary">
+            <p>Subtotal: {{ invoice.amount }} {{ invoice.subtotal_currency }}</p>
+            <p>Tax (15%): {{ invoice.tax }} {{ invoice.tax_currency }}</p>
+            <p><strong>Total: {{ invoice.total }} {{ invoice.total_currency }}</strong></p>
+        </div>
+
+        <!-- Footer -->
+        <div style="margin-top: 20px; text-align: center;">
+            <p>Thank you for your business!</p>
+            <p>Contact us at support@otech.et for any inquiries.</p>
+        </div>
+    </div>
+</body>
+</html>

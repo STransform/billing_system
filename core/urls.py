@@ -25,11 +25,11 @@ urlpatterns = [
     path("checkout/", views.checkout, name="checkout"),
     path("payment/<int:invoice_id>/", views.PaymentView.as_view(), name="payment"),
     path("customer_list/", views.customer_list, name="customer_list"),
-     path('customers/detail/<int:pk>/', views.CustomerDetailView.as_view(), name='customer_detail_view'),
+    path('customers/detail/<int:pk>/', views.CustomerDetailView.as_view(), name='customer_detail_view'),
     path("admin-invoices/", views.invoice_list, name="invoice_list"),
     path("subscription-plans/", views.subscription_plan_list, name="subscription_plan_list"),
     path("subscriptions/", views.subscription_list, name="subscription_list"),
     path("contact-submissions/", views.contact_submission_list, name="contact_submission_list"),
     path('subscriptions/detail/<int:pk>/', views.AdminSubscriptionDetailView.as_view(), name='admin_subscription_detail'),
-    
+    path('invoice/<int:pk>/download-pdf/', views.download_invoice_pdf, name='download_invoice_pdf'),
 ]

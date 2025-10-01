@@ -1,14 +1,17 @@
-# Import OpenStack connection and exception handling
+
 from openstack import connection
 from openstack.exceptions import SDKException
 
-# Import Django utilities for messaging and decimal calculations
 from django.contrib import messages
 from decimal import Decimal
-
+from openstack import connection
+from openstack.exceptions import SDKException
+from django.contrib import messages
+from decimal import Decimal
+from core.models import SubscriptionPlan
+from django.utils import timezone
 # Import the SubscriptionPlan model for database operations
 from core.models import SubscriptionPlan
-
 # Import timezone utility for setting creation/update timestamps
 from django.utils import timezone
 
@@ -17,18 +20,6 @@ def sync_subscription_plans(request=None):
     Synchronize SubscriptionPlan objects with OpenStack flavors.
 
     This function connects to an OpenStack cloud, retrieves available flavors, calculates
-    pricing based on vCPUs, RAM, and disk, and updates or creates corresponding
-    SubscriptionPlan objects in the database. If a request object is provided, it adds
-    success or error messages to inform the user of the outcome.
-
-    Args:
-        request (HttpRequest, optional): Django request object for adding messages.
-                                        Defaults to None.
-
-    Returns:
-        tuple: (success: bool, plans: QuerySet)
-            - success: True if synchronization was successful, False otherwise.
-            - plans: QuerySet of all SubscriptionPlan objects in the database.
     """
     try:
         # Establish connection to OpenStack using the 'kolla-admin' configuration
@@ -49,13 +40,13 @@ def sync_subscription_plans(request=None):
             Returns:
                 tuple: (hourly_price: Decimal, monthly_price: Decimal)
             """
-            # Calculate monthly price: vCPUs * 2700 + RAM (in GB) * 2500 + disk * 20
+            # To Calculate monthly price: vCPUs * 2700 + RAM (in GB) * 2500 + disk * 20
             monthly_price = (
                 (vcpus * Decimal('2700')) +
                 (Decimal(ram // 1024) * Decimal('2500')) +
                 (Decimal(disk) * Decimal('20'))
             )
-            # Calculate hourly price: monthly price divided by hours in a month (30 days * 24 hours)
+            # To Calculate hourly price: monthly price divided by hours in a month (30 days * 24 hours)
             hourly_price = monthly_price / (30 * 24)
             return hourly_price, monthly_price
 
@@ -82,8 +73,7 @@ def sync_subscription_plans(request=None):
                     'updated_at': timezone.now(),  
                 }
             )
-        
-        # Add success message if request object is provided and supports messages
+    
         if request and hasattr(request, 'session'):
             messages.success(request, "Subscription plans synchronized successfully with OpenStack.")
         # Return success status and all SubscriptionPlan objects
@@ -95,19 +85,7 @@ def sync_subscription_plans(request=None):
             messages.error(request, f"Failed to sync with OpenStack: {str(e)}. Using existing plans.")
         # Return failure status and existing SubscriptionPlan objects
         return False, SubscriptionPlan.objects.all()
-# Import OpenStack connection and exception handling
-from openstack import connection
-from openstack.exceptions import SDKException
 
-# Import Django utilities for messaging and decimal calculations
-from django.contrib import messages
-from decimal import Decimal
-
-# Import the SubscriptionPlan model for database operations
-from core.models import SubscriptionPlan
-
-# Import timezone utility for setting creation/update timestamps
-from django.utils import timezone
 
 def sync_subscription_plans(request=None):
     """

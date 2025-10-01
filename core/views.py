@@ -24,7 +24,7 @@ from uuid import uuid4
 from datetime import timedelta
 from django.db import transaction
 from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
-
+from weasyprint import HTML 
 class VerificationRequiredMixin(UserPassesTestMixin):
     """
     Mixin to ensure the user has a verified customer profile before accessing certain views.
@@ -1209,3 +1209,28 @@ MODEL_MAP = {
     'snapshot': {'model': SnapShotPrice, 'form': SnapShotPriceForm, 'id_field': 'id'},
     'image': {'model': ImagePrice, 'form': ImagePriceForm, 'id_field': 'id'},
 }
+@login_required
+def download_invoice_pdf(request, pk):
+    """
+    Generate and download a PDF version of the specified invoice.
+    Accessible to superusers or the invoice's owner.
+    """
+    invoice = get_object_or_404(Invoice, id=pk)
+    # Restrict access to superusers or the invoice's owner
+    if not request.user.is_superuser and invoice.customer.user != request.user:
+        messages.error(request, "You do not have permission to view this invoice.")
+        return redirect('core:customer_invoices') if request.user.is_authenticated else redirect('core:landing_page')
+
+    # Render the PDF template with invoice data
+    logo_url = request.build_absolute_uri('/static/img/logo.png')  
+    html_string = render_to_string('dashboard/customer/invoice_pdf.html', {
+        'invoice': invoice,
+        'logo_url': logo_url,
+    })
+
+    # Generate PDF
+    response = HttpResponse(content_type='application/pdf')
+    response['Content-Disposition'] = f'attachment; filename="invoice_{invoice.invoice_number}.pdf"'
+    HTML(string=html_string).write_pdf(response)
+
+    return response
