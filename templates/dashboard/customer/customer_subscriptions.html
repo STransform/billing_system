@@ -43,7 +43,11 @@ Your Subscriptions
                     <tbody class="bg-white divide-y divide-gray-200">
                         {% for sub_data in subscriptions %}
                             <tr class="table-row-hover hover:bg-gray-50" data-sub-id="{{ sub_data.subscription.id }}">
+<<<<<<< HEAD
                                 <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-800 font-medium">{{ sub_data.subscription.plan.display_name|default:"N/A" }}</td>
+=======
+                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-800 font-medium">{{ sub_data.subscription.plan.name|default:"N/A" }}</td>
+>>>>>>> origin/main
                                 <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-800 font-medium">{{ sub_data.subscription.billing_cycle|capfirst|default:"N/A" }}</td>
                                 <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-800 font-medium">{{ sub_data.subscription.plan.price_currency|default:"ETB" }} {{ sub_data.total_price|floatformat:2 }}</td>
                                 <td class="px-6 py-4 whitespace-nowrap text-sm">
@@ -59,7 +63,11 @@ Your Subscriptions
                                 <td class="px-6 py-4 whitespace-nowrap text-sm flex space-x-3 action-buttons">
                                     <button type="button" class="inline-flex items-center px-3 py-1 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-200 details-button"
                                         data-sub-id="{{ sub_data.subscription.id|escape }}"
+<<<<<<< HEAD
                                         data-plan-name="{{ sub_data.subscription.plan.display_name|escape }}"
+=======
+                                        data-plan-name="{{ sub_data.subscription.plan.name|escape }}"
+>>>>>>> origin/main
                                         data-billing-cycle="{{ sub_data.subscription.billing_cycle|capfirst|escape }}"
                                         data-total-price="{{ sub_data.subscription.plan.price_currency|escape }} {{ sub_data.total_price|floatformat:2|escape }}"
                                         data-vcpu="{{ sub_data.subscription.plan.vcpu|escape }}"

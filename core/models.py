@@ -260,8 +260,20 @@ class SubscriptionPlan(models.Model):
         """Return the custom display name for the flavor."""
         return self.DISPLAY_NAME_MAP.get(self.name, self.name)
 
+
     def __str__(self):
         return self.display_name
+
+    def get_price_for_billing_cycle(self, billing_cycle):
+        """Return the price for the specified billing cycle."""
+        price_map = {
+            'monthly': self.monthly_price,
+            'quarterly': self.quarterly_price or self.monthly_price * Decimal('3'),
+            'semi-annual': self.semi_annual_price or self.monthly_price * Decimal('6'),
+            'yearly': self.yearly_price or self.monthly_price * Decimal('12'),
+        }
+        return price_map.get(billing_cycle, self.monthly_price)
+        return self.name
 
     def get_price_for_billing_cycle(self, billing_cycle):
         """Return the price for the specified billing cycle."""

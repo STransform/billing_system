@@ -157,6 +157,10 @@ def billing_dashboard(request):
         'model_code': 'BillingDashboard',
     })
     return render(request, "dashboard/admin/admin_dashboard.html", context)
+class CustomerDetailView(LoginRequiredMixin, DetailView):
+    model = Customer
+    template_name = 'dashboard/admin/customer_detail_view.html'
+    context_object_name = 'customer'
 
 class CustomerDetailView(LoginRequiredMixin, DetailView):
     """
@@ -591,7 +595,7 @@ class CustomerProfileCreateView(LoginRequiredMixin, View):
                             del request.session['pending_subscription']
                             request.session.modified = True
 
-                # Transfer guest cart to authenticated user
+                # Convert guest cart to authenticated user
                 session_key = request.session.session_key
                 guest_cart = Cart.objects.filter(session_id=session_key, user__isnull=True).first()
                 if guest_cart:

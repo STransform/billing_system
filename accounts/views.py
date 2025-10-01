@@ -161,14 +161,12 @@ def verify_email(request, token):
             except SubscriptionPlan.DoesNotExist:
                 messages.error(request, "Selected subscription plan is no longer available.")
             finally:
-                # Clear pending subscription from session
                 if 'pending_subscription' in request.session:
                     del request.session['pending_subscription']
                     request.session.modified = True
     except Customer.DoesNotExist:
-        # Handle invalid verification token
         messages.error(request, "Invalid verification token.")
-    return redirect('accounts:login')  # Redirect to login page
+    return redirect('accounts:login')
 
 class CustomLoginView(LoginView):
     """
