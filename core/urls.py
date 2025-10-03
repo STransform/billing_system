@@ -32,4 +32,5 @@ urlpatterns = [
     path("contact-submissions/", views.contact_submission_list, name="contact_submission_list"),
     path('subscriptions/detail/<int:pk>/', views.AdminSubscriptionDetailView.as_view(), name='admin_subscription_detail'),
     path('invoice/<int:pk>/download-pdf/', views.download_invoice_pdf, name='download_invoice_pdf'),
+    
 ]

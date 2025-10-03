@@ -284,33 +284,8 @@ class SubscriptionPlan(models.Model):
             'yearly': self.yearly_price or self.monthly_price * Decimal('12'),
         }
         return price_map.get(billing_cycle, self.monthly_price)
-class Cart(models.Model):
-    session_id = models.CharField(max_length=255, unique=True, blank=True, null=True)
-    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True)
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
-    def calculate_total(self):
-        total = sum(item.subtotal() for item in self.items.all())
-        vat = total * Decimal('0.15')
-        return total, vat, total + vat
-    def __str__(self):
-        return f"Cart {self.id} for {self.user or 'Guest'}"
-class CartItem(models.Model):
-    cart = models.ForeignKey(Cart, on_delete=models.CASCADE, related_name='items')
-    plan = models.ForeignKey(SubscriptionPlan, on_delete=models.CASCADE)
-    billing_cycle = models.CharField(
-        max_length=50,
-        choices=[("monthly", "Monthly"), ("quarterly", "Quarterly"), ("semi-annual", "Semi-Annual"), ("yearly", "Yearly")],
-        default="monthly"
-    )
-    quantity = models.PositiveIntegerField(default=1)
-    price = models.DecimalField(max_digits=12, decimal_places=2)
 
-    def subtotal(self):
-        return self.price * self.quantity
 
-    def __str__(self):
-        return f"{self.quantity} x {self.plan.name} ({self.billing_cycle})"
 class Customer(models.Model):
     user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, null=True, blank=True)
     name = models.CharField(max_length=255, blank=True, null=True)
@@ -350,29 +325,3 @@ class Customer(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
     def __str__(self):
         return self.name or self.user.email if self.user else "Unnamed Customer"
-class Subscription(models.Model):
-    customer = models.ForeignKey(Customer, on_delete=models.CASCADE)
-    plan = models.ForeignKey(SubscriptionPlan, on_delete=models.CASCADE)
-    billing_cycle = models.CharField(
-        max_length=50,
-        choices=[("monthly", "Monthly"), ("quarterly", "Quarterly"), ("semi-annual", "Semi-Annual"), ("yearly", "Yearly")],
-        default="monthly"
-    )
-    start_date = models.DateTimeField(auto_now_add=True)
-    end_date = models.DateTimeField(null=True, blank=True)
-    status = models.CharField(
-        max_length=20,
-        choices=[
-            ('pending', 'Pending'),
-            ('confirmed', 'Confirmed'), 
-            ('active', 'Active'),
-            ('cancelled', 'Cancelled'),
-            ('expired', 'Expired')
-        ],
-        default='pending'
-    )
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
-
-    def __str__(self):
-        return f"{self.plan.name} ({self.billing_cycle}) for {self.customer}"
