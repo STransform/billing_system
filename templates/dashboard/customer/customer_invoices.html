@@ -1,0 +1,294 @@
+{% extends 'dashboard/common/base.html' %}
+{% load static i18n %}
+
+{% block title %}
+{% trans "Your Invoices" %}
+{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-8 main-content">
+    <!-- Applied main-content class for fixed header/sidebar spacing -->
+    <!-- Invoice List Section -->
+    <div class="bg-white p-6 rounded-lg shadow-md">
+        <div class="flex justify-between items-center mb-4">
+            <h2 class="text-xl font-semibold text-gray-800">{% trans "Invoice List" %}</h2>
+            <p class="text-sm text-gray-600">{% trans "Total Invoices" %}: {{ invoice_count }}</p>
+        </div>
+        <div class="overflow-x-auto">
+            {% if invoices %}
+                <table class="min-w-full divide-y divide-gray-200">
+                    <thead class="bg-gray-100">
+                        <tr>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">{% trans "Invoice #" %}</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">{% trans "Customer" %}</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">{% trans "Amount" %}</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">{% trans "Tax" %}</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">{% trans "Total" %}</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">{% trans "Actions" %}</th>
+                        </tr>
+                    </thead>
+                    <tbody class="bg-white divide-y divide-gray-200">
+                        {% for invoice in invoices %}
+                            <tr class="hover:bg-gray-50 transition duration-200 table-row-hover" data-invoice-id="{{ invoice.id }}">
+                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-800 font-medium">{{ invoice.invoice_number|default:"N/A" }}</td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-800 font-medium">
+                                    {{ invoice.customer.name|default:invoice.customer.user.email|default:"Unknown" }}
+                                </td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-800 font-medium">
+                                    {{ invoice.subtotal_currency|default:"ETB" }} {{ invoice.amount|floatformat:2|default:"0.00" }}
+                                </td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-800 font-medium">
+                                    {{ invoice.tax_currency|default:"ETB" }} {{ invoice.tax|floatformat:2|default:"0.00" }}
+                                </td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-800 font-medium">
+                                    {{ invoice.total_currency|default:"ETB" }} {{ invoice.total|floatformat:2|default:"0.00" }}
+                                </td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm flex space-x-3 action-buttons">
+                                    <button type="button" class="inline-flex items-center px-3 py-1 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-200 text-sm view-button"
+                                            data-invoice-id="{{ invoice.id|escape }}"
+                                            data-invoice-number="{{ invoice.invoice_number|escape }}"
+                                            data-customer="{{ invoice.customer.name|default:invoice.customer.user.email|escape }}"
+                                            data-amount="{{ invoice.subtotal_currency|default:'ETB'|escape }} {{ invoice.amount|floatformat:2|escape }}"
+                                            data-tax="{{ invoice.tax_currency|default:'ETB'|escape }} {{ invoice.tax|floatformat:2|escape }}"
+                                            data-total="{{ invoice.total_currency|default:'ETB'|escape }} {{ invoice.total|floatformat:2|escape }}"
+                                            data-status="{{ invoice.status|capfirst|escape }}"
+                                            data-issue-date="{{ invoice.issue_date|date:'Y-m-d'|escape }}"
+                                            data-due-date="{{ invoice.due_date|date:'Y-m-d'|escape }}"
+                                            data-subscription-plan="{% if invoice.subscription %}{{ invoice.subscription.plan.display_name|escape }}{% else %}N/A{% endif %}"
+                                            onclick="openInvoiceModal(this)">
+                                        <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12h.01M12 12h.01M9 12h.01M12 15h.01M12 9h.01M4 6h16M4 10h16M4 14h16M4 18h16"></path>
+                                        </svg>
+                                        {% trans "View" %}
+                                    </button>
+                                    {% if invoice.status in 'pending,confirmed' %}
+                                        <a href="{% url 'core:payment' invoice.id %}" class="inline-flex items-center px-3 py-1 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors duration-200 text-sm">
+                                            {% trans "Pay Now" %}
+                                        </a>
+                                    {% endif %}
+                                    <a href="{% url 'core:download_invoice_pdf' invoice.id %}" class="inline-flex items-center px-3 py-1 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors duration-200 text-sm">
+                                        {% trans "Download" %}
+                                    </a>
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+                <!-- Pagination -->
+                {% if invoices.has_other_pages %}
+                    <div class="mt-6">
+                        <nav class="flex justify-center">
+                            <ul class="inline-flex items-center -space-x-px text-sm">
+                                {% if invoices.has_previous %}
+                                    <li>
+                                        <a href="?page={{ invoices.previous_page_number }}" class="px-3 py-2 ml-0 leading-tight text-gray-500 bg-white border border-gray-300 rounded-l-lg hover:bg-gray-100 hover:text-gray-700 transition duration-200">
+                                            {% trans "Previous" %}
+                                        </a>
+                                    </li>
+                                {% endif %}
+                                {% for num in invoices.paginator.page_range %}
+                                    <li>
+                                        <a href="?page={{ num }}" class="px-3 py-2 {% if invoices.number == num %}text-white bg-blue-600 border-blue-600{% else %}text-gray-500 bg-white border-gray-300 hover:bg-gray-100 hover:text-gray-700{% endif %} border transition duration-200">
+                                            {{ num }}
+                                        </a>
+                                    </li>
+                                {% endfor %}
+                                {% if invoices.has_next %}
+                                    <li>
+                                        <a href="?page={{ invoices.next_page_number }}" class="px-3 py-2 leading-tight text-gray-500 bg-white border border-gray-300 rounded-r-lg hover:bg-gray-100 hover:text-gray-700 transition duration-200">
+                                            {% trans "Next" %}
+                                        </a>
+                                    </li>
+                                {% endif %}
+                            </ul>
+                        </nav>
+                    </div>
+                {% endif %}
+            {% else %}
+                <p class="text-gray-600 text-center py-4 font-medium">{% trans "No invoices found." %}</p>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Modal Structure for Invoice Details -->
+    <div id="invoiceModal" class="fixed inset-0 bg-gray-900 bg-opacity-60 flex items-center justify-center hidden z-50 transition-opacity duration-300">
+        <div class="bg-white rounded-xl shadow-2xl p-8 max-w-3xl w-full m-4 modal-content">
+            <h2 class="text-2xl font-semibold text-gray-900 mb-6 border-b border-gray-200 pb-4">{% trans "Invoice Details" %}</h2>
+            <div id="modalContent" class="grid grid-cols-1 md:grid-cols-2 gap-6 fade-in">
+                <div class="space-y-4">
+                    <div class="flex items-center p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors duration-200">
+                        <svg class="w-5 h-5 mr-2 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                        </svg>
+                        <span class="w-1/3 text-sm font-medium text-gray-600">{% trans "Invoice #" %}</span>
+                        <span id="modalInvoiceNumber" class="text-sm text-gray-900 font-medium"></span>
+                    </div>
+                    <div class="flex items-center p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors duration-200">
+                        <svg class="w-5 h-5 mr-2 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"></path>
+                        </svg>
+                        <span class="w-1/3 text-sm font-medium text-gray-600">{% trans "Customer" %}</span>
+                        <span id="modalCustomer" class="text-sm text-gray-900 font-medium"></span>
+                    </div>
+                    <div class="flex items-center p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors duration-200">
+                        <svg class="w-5 h-5 mr-2 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.686 1M12 8c-1.11 0-2.08.402-2.686 1M3 3h18M3 21h18"></path>
+                        </svg>
+                        <span class="w-1/3 text-sm font-medium text-gray-600">{% trans "Amount" %}</span>
+                        <span id="modalAmount" class="text-sm text-gray-900 font-medium"></span>
+                    </div>
+                    <div class="flex items-center p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors duration-200">
+                        <svg class="w-5 h-5 mr-2 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.686 1M12 8c-1.11 0-2.08.402-2.686 1M3 3h18M3 21h18"></path>
+                        </svg>
+                        <span class="w-1/3 text-sm font-medium text-gray-600">{% trans "Tax" %}</span>
+                        <span id="modalTax" class="text-sm text-gray-900 font-medium"></span>
+                    </div>
+                     <div class="flex items-center p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors duration-200">
+                        <svg class="w-5 h-5 mr-2 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                        </svg>
+                        <span class="w-1/3 text-sm font-medium text-gray-600">{% trans "Subscription Plan" %}</span>
+                        <span id="modalSubscriptionPlan" class="text-sm text-gray-900 font-medium"></span>
+                    </div>
+                </div>
+                <div class="space-y-4">
+                    <div class="flex items-center p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors duration-200">
+                        <svg class="w-5 h-5 mr-2 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.686 1M12 8c-1.11 0-2.08.402-2.686 1M3 3h18M3 21h18"></path>
+                        </svg>
+                        <span class="w-1/3 text-sm font-medium text-gray-600">{% trans "Total" %}</span>
+                        <span id="modalTotal" class="text-sm text-gray-900 font-medium"></span>
+                    </div>
+                    <div class="flex items-center p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors duration-200">
+                        <svg class="w-5 h-5 mr-2 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                        </svg>
+                        <span class="w-1/3 text-sm font-medium text-gray-600">{% trans "Status" %}</span>
+                        <span id="modalStatus" class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full"></span>
+                    </div>
+                    <div class="flex items-center p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors duration-200">
+                        <svg class="w-5 h-5 mr-2 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+                        </svg>
+                        <span class="w-1/3 text-sm font-medium text-gray-600">{% trans "Issue Date" %}</span>
+                        <span id="modalIssueDate" class="text-sm text-gray-900 font-medium"></span>
+                    </div>
+                    <div class="flex items-center p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors duration-200">
+                        <svg class="w-5 h-5 mr-2 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+                        </svg>
+                        <span class="w-1/3 text-sm font-medium text-gray-600">{% trans "Due Date" %}</span>
+                        <span id="modalDueDate" class="text-sm text-gray-900 font-medium"></span>
+                    </div>
+                   
+                </div>
+            </div>
+            <div class="mt-6 flex justify-end">
+                <button type="button" onclick="closeInvoiceModal()" class="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-200 focus:ring-4 focus:ring-blue-300 focus:outline-none">
+                    <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                    </svg>
+                    {% trans "Close" %}
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% block extra_js %}
+<script>
+function openInvoiceModal(button) {
+    const modal = document.getElementById('invoiceModal');
+    const modalContent = document.querySelector('.modal-content');
+    
+    // Populate modal with data from button attributes
+    document.getElementById('modalInvoiceNumber').textContent = button.dataset.invoiceNumber || 'N/A';
+    document.getElementById('modalCustomer').textContent = button.dataset.customer || 'Unknown';
+    document.getElementById('modalAmount').textContent = button.dataset.amount || 'ETB 0.00';
+    document.getElementById('modalTax').textContent = button.dataset.tax || 'ETB 0.00';
+    document.getElementById('modalTotal').textContent = button.dataset.total || 'ETB 0.00';
+    document.getElementById('modalStatus').textContent = button.dataset.status || 'Unknown';
+    document.getElementById('modalStatus').className = 'px-2 inline-flex text-xs leading-5 font-semibold rounded-full ' + (
+        button.dataset.status.toLowerCase() === 'paid' ? 'bg-green-100 text-green-800' :
+        button.dataset.status.toLowerCase() === 'pending' ? 'bg-yellow-100 text-yellow-800' :
+        button.dataset.status.toLowerCase() === 'confirmed' ? 'bg-blue-100 text-blue-800' :
+        'bg-red-100 text-red-800'
+    );
+    document.getElementById('modalIssueDate').textContent = button.dataset.issueDate || 'N/A';
+    document.getElementById('modalDueDate').textContent = button.dataset.dueDate || 'N/A';
+    document.getElementById('modalSubscriptionPlan').textContent = button.dataset.subscriptionPlan || 'N/A';
+    
+    // Show modal with animation
+    modal.classList.remove('hidden');
+    modalContent.classList.remove('opacity-0', 'scale-95');
+    modalContent.classList.add('opacity-100', 'scale-100');
+}
+
+function closeInvoiceModal() {
+    const modal = document.getElementById('invoiceModal');
+    const modalContent = document.querySelector('.modal-content');
+    
+    // Hide modal with animation
+    modalContent.classList.remove('opacity-100', 'scale-100');
+    modalContent.classList.add('opacity-0', 'scale-95');
+    setTimeout(() => {
+        modal.classList.add('hidden');
+    }, 300);
+}
+
+// Close modal on outside click
+document.getElementById('invoiceModal').addEventListener('click', function(event) {
+    if (event.target === this) {
+        closeInvoiceModal();
+    }
+});
+
+// Close modal on Escape key press
+document.addEventListener('keydown', function(event) {
+    if (event.key === 'Escape' && !document.getElementById('invoiceModal').classList.contains('hidden')) {
+        closeInvoiceModal();
+    }
+});
+</script>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    body {
+        font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+    }
+    .container {
+        max-width: 1280px;
+    }
+    h2, h3 {
+        background: linear-gradient(to right, #111827, #1f2937);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+    }
+    .table-row-hover {
+        transition: background-color 0.3s ease;
+    }
+    a:focus, button:focus {
+        outline: none;
+        box-shadow: 0 0 0 4px rgba(0, 0, 0, 0.1);
+    }
+    .fade-in {
+        animation: fadeIn 0.5s ease-in;
+    }
+    @keyframes fadeIn {
+        0% { opacity: 0; transform: translateY(10px); }
+        100% { opacity: 1; transform: translateY(0); }
+    }
+    .modal-content {
+        transform: scale(0.95);
+        opacity: 0;
+        transition: transform 0.3s ease, opacity 0.3s ease;
+    }
+    .modal-content.opacity-100 {
+        transform: scale(1);
+        opacity: 1;
+    }
+</style>
+{% endblock %}
+{% endblock %}

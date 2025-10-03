@@ -1,0 +1,105 @@
+{% extends 'dashboard/common/base.html' %}
+<!-- Extend the base template to inherit common structure and styling -->
+
+{% block content %}
+    <!-- Define the main content block, overriding the 'content' block from the base template -->
+    <h1 class="text-2xl font-semibold text-gray-800 hidden md:block py-2">
+        <!-- Heading for the admin dashboard, visible only on medium and larger screens -->
+        {% block title %}
+            Admin Overview
+            <!-- Default title for the page, can be overridden by child templates -->
+        {% endblock %}
+    </h1>
+
+    <!-- Grid layout for displaying key statistics cards -->
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
+        <!-- Responsive grid: 1 column on small screens, 2 on small-medium, 4 on large -->
+        <div class="bg-white p-6 rounded-lg shadow-md stat-card">
+            <!-- Card for displaying monthly revenue -->
+            <p class="text-sm font-medium text-gray-500">Monthly Revenue</p>
+            <!-- Label for the statistic -->
+            <p class="text-3xl font-bold text-gray-800">ETB 48,950</p>
+            <!-- Hardcoded monthly revenue value (in Ethiopian Birr) -->
+        </div>
+        <div class="bg-white p-6 rounded-lg shadow-md stat-card">
+            <!-- Card for displaying active tenants -->
+            <p class="text-sm font-medium text-gray-500">Active Tenants</p>
+            <!-- Label for the statistic -->
+            <p class="text-3xl font-bold text-gray-800">82</p>
+            <!-- Hardcoded number of active tenants -->
+        </div>
+        <div class="bg-white p-6 rounded-lg shadow-md stat-card">
+            <!-- Card for displaying total vCPU hours -->
+            <p class="text-sm font-medium text-gray-500">Total vCPU Hours</p>
+            <!-- Label for the statistic -->
+            <p class="text-3xl font-bold text-gray-800">1.25M</p>
+            <!-- Hardcoded total vCPU hours -->
+        </div>
+        <div class="bg-white p-6 rounded-lg shadow-md stat-card">
+            <!-- Card for displaying storage utilized -->
+            <p class="text-sm font-medium text-gray-500">Storage Utilized</p>
+            <!-- Label for the statistic -->
+            <p class="text-3xl font-bold text-gray-800">45.8 TB</p>
+            <!-- Hardcoded storage utilization value -->
+        </div>
+    </div>
+
+    <!-- Section for displaying server instances -->
+    <div class="bg-white p-6 rounded-lg shadow-md">
+        <!-- Container with white background, padding, rounded corners, and shadow -->
+        <h2 class="text-xl font-semibold mb-4 text-gray-800">Your Servers</h2>
+        <!-- Subheading for the server instances section -->
+
+        <!-- Scrollable container for the instances table -->
+        <div class="overflow-x-auto">
+            {% if error %}
+                <!-- Display error message if present in the context -->
+                <p class="error">{{ error }}</p>
+                <!-- Error message, typically indicating missing tenant ID -->
+            {% else %}
+                <!-- Display tenant ID and instances if no error -->
+                <p>Tenant ID: {{ tenant_id }}</p>
+                <!-- Display the tenant ID from the context -->
+
+                {% if instances %}
+                    <!-- If instances exist, render a table to display them -->
+                    <table class="min-w-full">
+                        <!-- Table with full width -->
+                        <thead>
+                            <tr class="border-b border-gray-200">
+                                <!-- Table header row with bottom border -->
+                                <th class="text-left py-3 px-4 font-semibold text-sm text-gray-600">Name</th>
+                                <!-- Column header for instance name -->
+                                <th class="text-left py-3 px-4 font-semibold text-sm text-gray-600">Instance ID</th>
+                                <!-- Column header for instance ID -->
+                                <th class="text-left py-3 px-4 font-semibold text-sm text-gray-600">Flavor ID</th>
+                                <!-- Column header for flavor ID -->
+                                <th class="text-left py-3 px-4 font-semibold text-sm text-gray-600">Start Date</th>
+                                <!-- Column header for start date -->
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for instance in instances %}
+                                <!-- Iterate over instances in the context -->
+                                <tr class="border-b border-gray-200 hover:bg-gray-50">
+                                    <!-- Table row with bottom border and hover effect -->
+                                    <td class="py-3 px-4 text-gray-800">{{ instance.name }}</td>
+                                    <!-- Display instance name -->
+                                    <td class="py-3 px-4 font-semibold text-gray-800">{{ instance.instance_id }}</td>
+                                    <!-- Display instance ID with bold font -->
+                                    <td class="py-3 px-4 font-semibold text-gray-800">{{ instance.flavor_id }}</td>
+                                    <!-- Display flavor ID with bold font -->
+                                    <td class="py-3 px-4 text-gray-800">{{ instance.start_date }}</td>
+                                    <!-- Display instance start date -->
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                {% else %}
+                    <!-- Display message if no instances are found -->
+                    <p>No instances found for this tenant.</p>
+                {% endif %}
+            {% endif %}
+        </div>
+    </div>
+{% endblock %}

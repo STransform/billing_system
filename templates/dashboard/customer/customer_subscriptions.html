@@ -1,0 +1,288 @@
+{% extends 'dashboard/common/base.html' %}
+{% load static %}
+
+{% block title %}
+    Your Subscriptions
+{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-8 sm:px-6 lg:px-8">
+    
+    <!-- <div class="mb-8 flex justify-between items-center">
+        <h1 class="text-3xl font-bold text-gray-900 md:text-4xl md:block hidden">Your Subscriptions</h1>
+        <div class="text-right hidden md:block">
+            <img src="{% static 'img/otech-logo.png' %}" alt="OTech Engineering Logo" class="h-10 inline-block mb-2">
+            <p class="text-sm font-semibold text-gray-700">OTech Engineering</p>
+            <p class="text-xs text-gray-500">Ayer Tena, Addis Ababa</p>
+            <p class="text-xs text-gray-500">Email: OEST@otech.et</p>
+        </div>
+    </div> -->
+
+    {% if messages %}
+        <div class="mb-8 space-y-3 max-w-4xl mx-auto">
+            {% for message in messages %}
+                <div class="p-4 rounded-lg text-sm font-medium text-center transition-all duration-300 border
+                    {% if message.tags == 'success' %} bg-green-50 text-green-700 border-green-200
+                    {% elif message.tags == 'error' %} bg-red-50 text-red-700 border-red-200
+                    {% elif message.tags == 'info' %} bg-blue-50 text-blue-700 border-blue-200
+                    {% else %} bg-gray-50 text-gray-700 border-gray-200
+                    {% endif %}">
+                    {{ message }}
+                </div>
+            {% endfor %}
+        </div>
+    {% endif %}
+
+    <div class="bg-white rounded-xl shadow-lg p-8 max-w-4xl mx-auto border border-gray-100">
+        <p class="text-sm text-gray-600 mb-6">Total Subscriptions: {{ subscription_count }}</p>
+
+        <div class="overflow-x-auto">
+            {% if subscriptions %}
+                <table class="min-w-full divide-y divide-gray-200">
+                    <thead class="bg-gray-50">
+                        <tr>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Plan Name</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Billing Cycle</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Total Price (incl. 15% VAT)</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody class="bg-white divide-y divide-gray-200">
+                        {% for sub_data in subscriptions %}
+                            <tr class="table-row-hover hover:bg-gray-50" data-sub-id="{{ sub_data.subscription.id }}">
+                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-800 font-medium">{{ sub_data.subscription.plan.display_name|default:"N/A" }}</td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-800 font-medium">{{ sub_data.subscription.billing_cycle|capfirst|default:"N/A" }}</td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-800 font-medium">{{ sub_data.subscription.plan.price_currency|default:"ETB" }} {{ sub_data.total_price|floatformat:2 }}</td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm">
+                                    <span class="status-badge px-2 inline-flex text-xs leading-5 font-semibold rounded-full
+                                        {% if sub_data.subscription.status == 'active' %} bg-green-100 text-green-800
+                                        {% elif sub_data.subscription.status == 'pending' %} bg-yellow-100 text-yellow-800
+                                        {% elif sub_data.subscription.status == 'confirmed' %} bg-blue-100 text-blue-800
+                                        {% else %} bg-red-100 text-red-800
+                                        {% endif %}">
+                                        {{ sub_data.subscription.status|capfirst }}
+                                    </span>
+                                </td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm flex space-x-3 action-buttons">
+                                    <button type="button" class="inline-flex items-center px-3 py-1 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-200 details-button"
+                                        data-sub-id="{{ sub_data.subscription.id|escape }}"
+                                        data-plan-name="{{ sub_data.subscription.plan.display_name|escape }}"
+                                        data-billing-cycle="{{ sub_data.subscription.billing_cycle|capfirst|escape }}"
+                                        data-total-price="{{ sub_data.subscription.plan.price_currency|escape }} {{ sub_data.total_price|floatformat:2|escape }}"
+                                        data-vcpu="{{ sub_data.subscription.plan.vcpu|escape }}"
+                                        data-ram="{{ sub_data.subscription.plan.ram|escape }}"
+                                        data-os-storage="{{ sub_data.subscription.plan.os_storage|escape }}"
+                                        data-data-storage="{{ sub_data.subscription.plan.data_storage|escape }}"
+                                        data-operating-system="{{ sub_data.formatted_os|escape }}"
+                                        data-status="{{ sub_data.subscription.status|capfirst|escape }}"
+                                        data-start-date="{{ sub_data.subscription.start_date|date:'Y-m-d'|escape }}"
+                                        data-end-date="{{ sub_data.subscription.end_date|date:'Y-m-d'|escape }}"
+                                        onclick="openSubscriptionModal(this)">
+                                        <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12h.01M12 12h.01M9 12h.01M12 15h.01M12 9h.01M4 6h16M4 10h16M4 14h16M4 18h16"></path>
+                                        </svg>
+                                        Details
+                                    </button>
+                                    {% if sub_data.subscription.status == 'pending' %}
+                                        <form action="{% url 'core:customer_subscriptions' %}" method="post" class="inline confirm-form" data-sub-id="{{ sub_data.subscription.id }}">
+                                            {% csrf_token %}
+                                            <input type="hidden" name="action" value="confirm">
+                                            <input type="hidden" name="subscription_id" value="{{ sub_data.subscription.id }}">
+                                            <button type="submit" class="inline-flex items-center px-3 py-1 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors duration-200 confirm-button">
+                                                <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                                                </svg>
+                                                Confirm
+                                            </button>
+                                        </form>
+                                        <form action="{% url 'core:customer_subscriptions' %}" method="post" class="inline cancel-form" data-sub-id="{{ sub_data.subscription.id }}">
+                                            {% csrf_token %}
+                                            <input type="hidden" name="action" value="cancel">
+                                            <input type="hidden" name="subscription_id" value="{{ sub_data.subscription.id }}">
+                                            <button type="submit" class="inline-flex items-center px-3 py-1 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors duration-200 cancel-button">
+                                                <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                                                </svg>
+                                                Cancel
+                                            </button>
+                                        </form>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                        {% empty %}
+                            <tr>
+                                <td colspan="5" class="px-6 py-4 text-center text-sm text-gray-500 font-medium">
+                                    No subscriptions found.
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+                {% if subscriptions.has_other_pages %}
+                    <div class="mt-6">
+                        <nav class="flex justify-center">
+                            <ul class="inline-flex items-center -space-x-px text-sm">
+                                {% if subscriptions.has_previous %}
+                                    <li>
+                                        <a href="?page={{ subscriptions.previous_page_number }}" class="px-3 py-2 ml-0 leading-tight text-gray-500 bg-white border border-gray-300 rounded-l-lg hover:bg-gray-100 hover:text-gray-700 transition duration-200">Previous</a>
+                                    </li>
+                                {% endif %}
+                                {% for num in subscriptions.paginator.page_range %}
+                                    <li>
+                                        <a href="?page={{ num }}" class="px-3 py-2 {% if subscriptions.number == num %}text-white bg-blue-600 border-blue-600{% else %}text-gray-500 bg-white border-gray-300 hover:bg-gray-100 hover:text-gray-700{% endif %} border transition duration-200">{{ num }}</a>
+                                    </li>
+                                {% endfor %}
+                                {% if subscriptions.has_next %}
+                                    <li>
+                                        <a href="?page={{ subscriptions.next_page_number }}" class="px-3 py-2 leading-tight text-gray-500 bg-white border border-gray-300 rounded-r-lg hover:bg-gray-100 hover:text-gray-700 transition duration-200">Next</a>
+                                    </li>
+                                {% endif %}
+                            </ul>
+                        </nav>
+                    </div>
+                {% endif %}
+            {% else %}
+                <p class="text-gray-600 text-center py-4 font-medium">No subscriptions found.</p>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Modal Structure -->
+    <div id="subscriptionModal" class="fixed inset-0 bg-gray-900 bg-opacity-60 flex items-center justify-center hidden z-50 transition-opacity duration-300">
+        <div class="bg-white rounded-xl shadow-2xl p-8 max-w-3xl w-full m-4 modal-content">
+            <h2 class="text-2xl font-semibold text-gray-900 mb-6 border-b border-gray-200 pb-4">Subscription Details</h2>
+            <div id="modalContent" class="grid grid-cols-1 md:grid-cols-2 gap-6 fade-in">
+                <div class="space-y-4">
+                    <div class="flex items-center p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors duration-200">
+                        <svg class="w-5 h-5 mr-2 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                        </svg>
+                        <span class="w-1/3 text-sm font-medium text-gray-600">Plan Name</span>
+                        <span id="modalPlanName" class="text-sm text-gray-900 font-medium"></span>
+                    </div>
+                    <div class="flex items-center p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors duration-200">
+                        <svg class="w-5 h-5 mr-2 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.686 1M12 8c-1.11 0-2.08.402-2.686 1M3 3h18M3 21h18"></path>
+                        </svg>
+                        <span class="w-1/3 text-sm font-medium text-gray-600">Billing Cycle</span>
+                        <span id="modalBillingCycle" class="text-sm text-gray-900 font-medium"></span>
+                    </div>
+                    <div class="flex items-center p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors duration-200">
+                        <svg class="w-5 h-5 mr-2 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.686 1M12 8c-1.11 0-2.08.402-2.686 1M3 3h18M3 21h18"></path>
+                        </svg>
+                        <span class="w-1/3 text-sm font-medium text-gray-600">Total Price (incl. 15% VAT)</span>
+                        <span id="modalTotalPrice" class="text-sm text-gray-900 font-medium"></span>
+                    </div>
+                    <div class="flex items-center p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors duration-200">
+                        <svg class="w-5 h-5 mr-2 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 12h14M12 5v14"></path>
+                        </svg>
+                        <span class="w-1/3 text-sm font-medium text-gray-600">vCPUs</span>
+                        <span id="modalVCPUs" class="text-sm text-gray-900 font-medium"></span>
+                    </div>
+                    <div class="flex items-center p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors duration-200">
+                        <svg class="w-5 h-5 mr-2 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4"></path>
+                        </svg>
+                        <span class="w-1/3 text-sm font-medium text-gray-600">RAM (GB)</span>
+                        <span id="modalRAM" class="text-sm text-gray-900 font-medium"></span>
+                    </div>
+                </div>
+                <div class="space-y-4">
+                    <div class="flex items-center p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors duration-200">
+                        <svg class="w-5 h-5 mr-2 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z"></path>
+                        </svg>
+                        <span class="w-1/3 text-sm font-medium text-gray-600">OS Storage (GB)</span>
+                        <span id="modalOSStorage" class="text-sm text-gray-900 font-medium"></span>
+                    </div>
+                    <div class="flex items-center p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors duration-200">
+                        <svg class="w-5 h-5 mr-2 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4m0 5c0 2.21-3.582 4-8 4s-8-1.79-8-4"></path>
+                        </svg>
+                        <span class="w-1/3 text-sm font-medium text-gray-600">Data Storage (GB)</span>
+                        <span id="modalDataStorage" class="text-sm text-gray-900 font-medium"></span>
+                    </div>
+                    <div class="flex items-center p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors duration-200">
+                        <svg class="w-5 h-5 mr-2 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                        </svg>
+                        <span class="w-1/3 text-sm font-medium text-gray-600">Operating System</span>
+                        <span id="modalOperatingSystem" class="text-sm text-gray-900 font-medium"></span>
+                    </div>
+                    <div class="flex items-center p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors duration-200">
+                        <svg class="w-5 h-5 mr-2 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                        </svg>
+                        <span class="w-1/3 text-sm font-medium text-gray-600">Status</span>
+                        <span id="modalStatus" class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full"></span>
+                    </div>
+                    <div class="flex items-center p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors duration-200">
+                        <svg class="w-5 h-5 mr-2 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+                        </svg>
+                        <span class="w-1/3 text-sm font-medium text-gray-600">Start Date</span>
+                        <span id="modalStartDate" class="text-sm text-gray-900 font-medium"></span>
+                    </div>
+                    <div class="flex items-center p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors duration-200">
+                        <svg class="w-5 h-5 mr-2 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+                        </svg>
+                        <span class="w-1/3 text-sm font-medium text-gray-600">End Date</span>
+                        <span id="modalEndDate" class="text-sm text-gray-900 font-medium"></span>
+                    </div>
+                </div>
+            </div>
+            <div class="mt-6 flex justify-end">
+                <button type="button" onclick="closeSubscriptionModal()" class="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-200 focus:ring-4 focus:ring-blue-300 focus:outline-none">
+                    <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                    </svg>
+                    Close
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% block extra_js %}
+    <script src="{% static 'js/subscriptions.js' %}"></script>
+{% endblock %}
+
+{% block extra_css %}
+    <style>
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+        }
+        .container {
+            max-width: 1280px;
+        }
+        h2, h3 {
+            background: linear-gradient(to right, #111827, #1f2937);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        .table-row-hover {
+            transition: background-color 0.3s ease;
+        }
+        a:focus, button:focus {
+            outline: none;
+            box-shadow: 0 0 0 4px rgba(0, 0, 0, 0.1);
+        }
+        .fade-in {
+            animation: fadeIn 0.5s ease-in;
+        }
+        @keyframes fadeIn {
+            0% { opacity: 0; transform: translateY(10px); }
+            100% { opacity: 1; transform: translateY(0); }
+        }
+        .modal-content {
+            transform: scale(0.95);
+            opacity: 0;
+            transition: transform 0.3s ease, opacity 0.3s ease;
+        }
+    </style>
+{% endblock %}
+{% endblock %}

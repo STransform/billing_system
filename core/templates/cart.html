@@ -1,0 +1,91 @@
+{% extends "landing_page/base.html" %}
+{% load static i18n core_tags %}
+
+{% block title %}{% trans "Cart - OCloud" %}{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-12 pt-28">
+    <h1 class="text-3xl font-extrabold text-gray-800 mb-6">{% trans "Billing Cart" %}</h1>
+
+    {% if messages %}
+        <div class="mb-6">
+            {% for message in messages %}
+                <div class="mb-2 p-3 rounded-lg text-sm font-medium
+                    {% if message.tags == 'success' %} bg-green-100 text-green-700
+                    {% elif message.tags == 'error' %} bg-red-100 text-red-700
+                    {% elif message.tags == 'info' %} bg-blue-100 text-blue-700
+                    {% else %} bg-gray-200 text-gray-700
+                    {% endif %}">
+                    {{ message }}
+                </div>
+            {% endfor %}
+        </div>
+    {% endif %}
+
+    {% if cart and cart.items.exists %}
+        <div class="grid md:grid-cols-3 gap-6">
+            <div class="md:col-span-2 bg-white rounded-lg shadow p-6">
+                <table class="w-full text-left">
+                    <thead>
+                        <tr class="border-b text-gray-600 text-sm uppercase tracking-wider">
+                            <th class="py-3">{% trans "Plan" %}</th>
+                            <th class="py-3">{% trans "Billing Cycle" %}</th>
+                            <th class="py-3">{% trans "Price" %}</th>
+                            <th class="py-3 text-right">{% trans "Actions" %}</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y">
+                        {% for item in cart.items.all %}
+                            <tr>
+                                <td class="py-4 font-medium text-gray-800">{{ item.plan.name }}</td>
+                                <td class="py-4 capitalize">{{ item.billing_cycle }}</td>
+                                <td class="py-4">{{ item.plan.price_currency }} {{ item.price }}</td>
+                                <td class="py-4 text-right">
+                                    <a href="{% url 'core:remove_from_cart' item.id %}" 
+                                       class="text-red-600 hover:text-red-800 font-semibold">
+                                       {% trans "Remove" %}
+                                    </a>
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="bg-white rounded-lg shadow p-6 h-fit">
+                <h2 class="text-xl font-bold text-gray-800 mb-4">{% trans "Order Summary" %}</h2>
+                <ul class="space-y-2 text-gray-700">
+                    <li class="flex justify-between">
+                        <span>{% trans "Subtotal" %}</span>
+                        <span>{{ cart.items.first.plan.price_currency }} {{ total }}</span>
+                    </li>
+                    <li class="flex justify-between">
+                        <span>{% trans "VAT (15%)" %}</span>
+                        <span>{{ cart.items.first.plan.price_currency }} {{ vat }}</span>
+                    </li>
+                    <li class="flex justify-between font-bold text-gray-900 border-t pt-2">
+                        <span>{% trans "Total" %}</span>
+                        <span>{{ cart.items.first.plan.price_currency }} {{ grand_total }}</span>
+                    </li>
+                </ul>
+                <form method="post" class="mt-6">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="proceed_to_checkout">
+                    <button type="submit" 
+                            class="w-full py-3 bg-red-600 text-white rounded-lg font-semibold hover:bg-red-700 transition">
+                        {% trans "Proceed to Checkout" %}
+                    </button>
+                </form>
+            </div>
+        </div>
+    {% else %}
+        <div class="bg-white rounded-lg shadow p-6 text-center text-gray-600">
+            <p class="mb-4">{% trans "Your cart is empty." %}</p>
+            <a href="{% url 'core:landing_page' %}" 
+               class="inline-block px-6 py-3 bg-gray-700 text-white rounded-lg font-semibold hover:bg-gray-800 transition">
+               {% trans "Continue" %}
+            </a>
+        </div>
+    {% endif %}
+</div>
+{% endblock %}
